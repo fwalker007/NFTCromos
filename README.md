@@ -12,5 +12,5 @@ To deploy this project to Gitpod, follow these steps:
 
 [![Open in Gitpod](https://fwalker007-nftcromos-k0g3upraueh.ws-us34.gitpod.io/)
 
-You must have MetaMask wallet or CoainBase wallet
+You must have a MetaMask wallet or CoainBase wallet
 
