@@ -18,8 +18,6 @@ import { TextureLoader } from "three";
 import { Canvas, useLoader } from "@react-three/fiber";
 import { MapControls, Sky, Stars } from "@react-three/drei";
 
-import GameCard from "./GameCard"
-
 import MetalMap from "./assets/MetalMap.png";
 
 const { Header } = Layout;
@@ -100,6 +98,8 @@ const App = ({ isServerInfo }) => {
     setData(nftImageUrl);
   }
   
+  console.log( " GOT HERE 2")
+
   return (
     <Layout style={{ height: "100vh", overflow: "auto" }}>
       <Router>
