@@ -1,12 +1,6 @@
 import { useEffect, useState, Suspense} from "react";
 import { useMoralis } from "react-moralis";
-import {
-  BrowserRouter as Router,
-  Switch,
-  Route,
-  NavLink,
-  Redirect,
-} from "react-router-dom";
+import { BrowserRouter as Router, Switch, Route, NavLink, Redirect} from "react-router-dom";
 import Account from "components/Account";
 import NFTBalance from "components/NFTBalance";
 import { Menu, Layout} from "antd";
@@ -17,6 +11,7 @@ import * as THREE from "three";
 import { TextureLoader } from "three";
 import { Canvas, useLoader } from "@react-three/fiber";
 import { MapControls, Sky, Stars } from "@react-three/drei";
+import { Physics, useBox } from "@react-three/cannon";
 
 import MetalMap from "./assets/MetalMap.png";
 
@@ -60,27 +55,52 @@ const styles = {
 };
 
 
+const Card = () => {
+
+  const [ref]  = useBox(() => ({mass: 1 , position: [0, 10, 0] }));
+  
+	return (
+		<mesh ref={ref}>
+			<boxBufferGeometry attach="geometry" />
+			<meshLabertMaterial attach="material" color="hotpink" />
+		</mesh>
+	)
+}
+
 const Plane = ({ defaultStart, defaultImage }) => {
 
-  const [isBlue, setIsBlue] = useState(true)
+  const [ref]  = useBox(() => ({mass: 1 }));
 
 	// Lets add a cutom texture & material...
   THREE.TextureLoader.prototype.crossOrigin = ''
 	const [metalMap] = useLoader(TextureLoader, [defaultImage])
   
-  
-  console.log("ADD PLANE")
-
   if( defaultImage === undefined )
   return ( <div></div> )
   else
 	return (
-		<mesh position={defaultStart} >
+		<mesh ref={ref} position={defaultStart} >
 			<planeBufferGeometry attach="geometry" args={[25, 25]} />
 			<meshStandardMaterial attach="material" map={metalMap} metalness={0.5} />
 		</mesh>
 	)
 }
+
+const Table = ({ defaultStart, defaultImage }) => {
+
+	// Lets add a cutom texture & material...
+  THREE.TextureLoader.prototype.crossOrigin = ''
+	const [metalMap] = useLoader(TextureLoader, [defaultImage])
+  
+
+	return (
+		<mesh position={[0, -120, 0]} rotation = { [-Math.PI / 2, 0,0 ]}>
+			<planeBufferGeometry attach="geometry" args={[1625, 1625]} />
+			<meshLambertMaterial attach="material" color="lightblue" />
+		</mesh>
+	)
+}
+
 
 const App = ({ isServerInfo }) => {
   const { isWeb3Enabled, enableWeb3, isAuthenticated, isWeb3EnableLoading } =
@@ -98,8 +118,6 @@ const App = ({ isServerInfo }) => {
     setData(nftImageUrl);
   }
   
-  console.log( " GOT HERE 2")
-
   return (
     <Layout style={{ height: "100vh", overflow: "auto" }}>
       <Router>
@@ -141,7 +159,7 @@ const App = ({ isServerInfo }) => {
         </Header>
       </Router>
 
-      <Canvas camera={{ position: [0, 0, 30], up: [0, 0, 1], far: 10000 }}>
+      <Canvas camera={{ position: [0, 0, 120], up: [0, 0, 1], far: 10000 }}>
 			<Suspense fallback={null}>
 
 				<Sky
@@ -161,8 +179,14 @@ const App = ({ isServerInfo }) => {
 				/>
 
 				<ambientLight intensity={0.75} />
+        
+        <Physics>
+          <Card/>
+          <Plane defaultStart={[-30, 20, 0 ]} defaultImage={data}/>
+          <Plane defaultStart={[+30, 20, 0 ]} defaultImage={data}/>
+        </Physics>
 
-        <Plane defaultImage={data}/>
+        <Table defaultImage={MetalMap}/>
 
         <MapControls />
 
@@ -174,6 +198,7 @@ const App = ({ isServerInfo }) => {
   );
 };
 
+//Moralis Logo here for the Hackathon
 export const Logo = () => (
   <div style={{ display: "flex" }}>
     <svg
