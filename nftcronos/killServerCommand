@@ -1,0 +1,4 @@
+lsof -t -i 
+kill -9 thePid from above
+or
+ Kill -9 $(lsof -t -i :PORT_TO_KILL)

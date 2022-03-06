@@ -1,4 +1,4 @@
-import { useEffect, useState, Suspense} from "react";
+import { useEffect, useState, Suspense, useRef } from "react";
 import { useMoralis } from "react-moralis";
 import { BrowserRouter as Router, Switch, Route, NavLink, Redirect} from "react-router-dom";
 import Account from "components/Account";
@@ -9,9 +9,9 @@ import "./style.css";
 
 import * as THREE from "three";
 import { TextureLoader } from "three";
-import { Canvas, useLoader } from "@react-three/fiber";
-import { MapControls, Sky, Stars } from "@react-three/drei";
-import { Physics, useBox } from "@react-three/cannon";
+import { Canvas, useLoader, useFrame, useThree } from "@react-three/fiber";
+import { OrbitControls, Sky, Stars  } from "@react-three/drei";
+import { Physics, Debug, useBox, usePlane } from "@react-three/cannon";
 
 import MetalMap from "./assets/MetalMap.png";
 
@@ -55,17 +55,37 @@ const styles = {
 };
 
 
-const Card = () => {
+var currentCard = 1;
 
-  const [ref]  = useBox(() => ({mass: 1 , position: [0, 10, 0] }));
+const Card1 = ({ defaultImage, aMass }) => {
+  console.log("CARD1: " + aMass)
+  const [ref]  = useBox(() => ({mass: aMass , position: [30, 10, 0], args: [25, 25, 0.2] }));
+	const [theTexture] = useLoader(TextureLoader,[ defaultImage, defaultImage, defaultImage, defaultImage, defaultImage] )
   
 	return (
 		<mesh ref={ref}>
-			<boxBufferGeometry attach="geometry" />
-			<meshLabertMaterial attach="material" color="hotpink" />
+			<boxBufferGeometry attach="geometry" args={[25, 25, 0.2]}/>
+			<meshStandardMaterial attach="material" map={theTexture} metalness={0.5} />
 		</mesh>
 	)
 }
+
+
+const Card2 = ({ defaultImage, aMass }) => {
+  
+  console.log("CARD2: " + aMass)
+  const [ref]  = useBox(() => ({mass: aMass , position: [30, 10, 0], args: [25, 25, 0.2] }));
+	const [theTexture] = useLoader(TextureLoader,[ defaultImage, defaultImage, defaultImage, defaultImage, defaultImage] )
+  
+	return (
+		<mesh ref={ref}>
+			<boxBufferGeometry attach="geometry" args={[25, 25, 0.2]}/>
+			<meshStandardMaterial attach="material" map={theTexture} metalness={0.5} />
+		</mesh>
+	)
+}
+
+
 
 const Plane = ({ defaultStart, defaultImage }) => {
 
@@ -86,13 +106,14 @@ const Plane = ({ defaultStart, defaultImage }) => {
 	)
 }
 
+//A horizontal surface that we can use as a table. This will be subtituted in AR with an actual surface
 const Table = ({ defaultStart, defaultImage }) => {
+  const[ref] = usePlane(() => ({position: [0, -120, 0], rotation:[-Math.PI / 2, 0,0 ] }));
 
 	// Lets add a cutom texture & material...
   THREE.TextureLoader.prototype.crossOrigin = ''
 	const [metalMap] = useLoader(TextureLoader, [defaultImage])
   
-
 	return (
 		<mesh position={[0, -120, 0]} rotation = { [-Math.PI / 2, 0,0 ]}>
 			<planeBufferGeometry attach="geometry" args={[1625, 1625]} />
@@ -100,7 +121,6 @@ const Table = ({ defaultStart, defaultImage }) => {
 		</mesh>
 	)
 }
-
 
 const App = ({ isServerInfo }) => {
   const { isWeb3Enabled, enableWeb3, isAuthenticated, isWeb3EnableLoading } =
@@ -113,10 +133,29 @@ const App = ({ isServerInfo }) => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isAuthenticated, isWeb3Enabled]);
 
-  const [data, setData] = useState(MetalMap);
-  const childToParent = (nftImageUrl) => {
-    setData(nftImageUrl);
+
+
+  const [card1Mass, setCard1Mass] = useState(0);
+  const [card2Mass, setCard2Mass] = useState(0);
+
+  const [nftUrl1, setNftUrl1] = useState(MetalMap);
+  const [nftUrl2, setNftUrl2] = useState(MetalMap);
+
+  const nftUrlToParent = (nftImageUrl) => {  
+
+    if( currentCard++ >= 2){ 
+      console.log("CURRENT 1  " + currentCard );
+      setNftUrl1(nftImageUrl);
+      setCard1Mass(1)
+      currentCard = 1;
+    }
+    else{
+      console.log("CURRENT 2  " + currentCard );
+      setNftUrl2(nftImageUrl);
+      setCard2Mass(1)
+    }
   }
+  
   
   return (
     <Layout style={{ height: "100vh", overflow: "auto" }}>
@@ -146,7 +185,7 @@ const App = ({ isServerInfo }) => {
         <div style={styles.content}>
           <Switch>
             <Route path="/nftBalance">
-              <NFTBalance childToParent={childToParent}/>
+              <NFTBalance childToParent={nftUrlToParent}/>
             </Route>
           </Switch>
           <Redirect to="/NFTMarketPlace" />
@@ -159,11 +198,18 @@ const App = ({ isServerInfo }) => {
         </Header>
       </Router>
 
-      <Canvas camera={{ position: [0, 0, 120], up: [0, 0, 1], far: 10000 }}>
+      <Canvas camera={{ position: [0, 0, 200], up: [0, 0, -1], far: 10000 }} 
+        onCreated={({ gl }) => {
+            gl.shadowMap.enabled = true;
+            gl.shadowMap.type = THREE.PCFSoftShadowMap;
+        }}>
+
 			<Suspense fallback={null}>
 
+      < OrbitControls />
+
 				<Sky
-					distance={450000}
+					distance={45000000}
 					sunPosition={[0, 1, 0]}
 					inclination={0}
 					azimuth={0.25}
@@ -179,16 +225,12 @@ const App = ({ isServerInfo }) => {
 				/>
 
 				<ambientLight intensity={0.75} />
-        
-        <Physics>
-          <Card/>
-          <Plane defaultStart={[-30, 20, 0 ]} defaultImage={data}/>
-          <Plane defaultStart={[+30, 20, 0 ]} defaultImage={data}/>
+
+        <Physics  gravity = {[0, -90.81, 0]}>
+          <Card1 defaultImage={nftUrl1} aMass = {card1Mass}/>
+          <Card2 defaultImage={nftUrl2} aMass = {card2Mass}/>
+          <Table defaultImage={MetalMap}/>
         </Physics>
-
-        <Table defaultImage={MetalMap}/>
-
-        <MapControls />
 
 			</Suspense>
 
