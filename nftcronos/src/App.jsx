@@ -10,8 +10,9 @@ import "./style.css";
 import * as THREE from "three";
 import { TextureLoader } from "three";
 import { Canvas, useLoader, useFrame, useThree } from "@react-three/fiber";
-import { MapControls, Sky, Stars  } from "@react-three/drei";
+import { MapControls, OrbitControls, Sky, Stars, TransformControls, useCubeTexture  } from "@react-three/drei";
 import { Physics, Debug, useBox, usePlane } from "@react-three/cannon";
+import { useDrag } from "react-use-gesture"
 
 import MetalMap from "./assets/MetalMap.png";
 
@@ -57,67 +58,74 @@ const styles = {
 
 var currentCard = 1;
 
-const Card1 = ({ defaultImage, aMass }) => {
-  console.log("CARD1: " + aMass)
-  const [ref]  = useBox(() => ({mass: aMass , position: [30, -20, 0], rotation: [-0.7, 0, 0], args: [25, 25, 0.2] }));
-	const [theTexture] = useLoader(TextureLoader,[ defaultImage, defaultImage, defaultImage, defaultImage, defaultImage] )
-  
-	return (
-		<mesh ref={ref}>
-			<boxBufferGeometry attach="geometry" args={[25, 25, 0.2]}/>
-			<meshStandardMaterial attach="material" map={theTexture} metalness={0.5} />
-		</mesh>
+const Card1 = ({ defaultImage, initialPosition   }) => {
+  console.log("CARD1: " + initialPosition )
+
+  const [ref, api]  = useBox(() => ({mass: 1 , position: initialPosition, rotation: [-0.7, 0, 0], args: [25, 35, 1] }));
+	const [theDefaultTexture] = useLoader(TextureLoader,[ MetalMap, MetalMap, MetalMap, MetalMap, MetalMap, MetalMap] )
+  const [theNFTTexture] = useLoader(TextureLoader,[ defaultImage, defaultImage, defaultImage, defaultImage, defaultImage, defaultImage]  )
+
+  return (
+    <mesh castShadow  onClick={(e) => (e.stopPropagation(), console.log("CARD 1 CLIKED"), api.velocity.set(0, 100, 0))}  ref={ref}>
+      <boxBufferGeometry attach="geometry" position={initialPosition} rotation={[-0.7, 0, 0]} args={[25, 35, 1]}/>
+      <meshStandardMaterial attachArray="material" map={theDefaultTexture} metalness={0.5} side={THREE.DoubleSide} />
+      <meshStandardMaterial attachArray="material" map={theDefaultTexture} metalness={0.5} side={THREE.DoubleSide} />
+      <meshStandardMaterial attachArray="material" map={theDefaultTexture} metalness={0.5} side={THREE.DoubleSide} />
+      <meshStandardMaterial attachArray="material" map={theDefaultTexture} metalness={0.5} side={THREE.DoubleSide} />
+      <meshStandardMaterial attachArray="material" map={theNFTTexture} metalness={0.5} side={THREE.DoubleSide} />
+      <meshStandardMaterial attachArray="material" map={theDefaultTexture} metalness={0.5} side={THREE.DoubleSide} />
+    </mesh>
 	)
 }
 
+const Card2 = ({ defaultImage, initialPosition   }) => {
 
-const Card2 = ({ defaultImage, aMass }) => {
-  
-  console.log("CARD2: " + aMass)
-  const [ref]  = useBox(() => ({mass: aMass , position: [-30, -20, 0], rotation: [-0.7, 0, 0], args: [25, 25, 0.2] }));
-	const [theTexture] = useLoader(TextureLoader,[ defaultImage, defaultImage, defaultImage, defaultImage, defaultImage] )
-  
+  const { size, viewport } = useThree();
+  const [position, setPosition] = useState(initialPosition);
+  const [quaternion, setQuaternion] = useState([0, 0, 0, 0]);
+  const aspect = size.width / viewport.width;
+
+  console.log("CARD2: " + position )
+
+  const [ref, api]  = useBox(() => ({mass: 1 , position: position, rotation: [-0.7, 0, 0], args: [25, 35, 1] }));
+
+  const bind = useDrag(({ offset: [,], xy: [x, y], first, last }) => {
+    if (first) {
+        api.mass.set(0);
+    } else if (last) {
+        api.mass.set(1);
+    }
+    api.position.set((x - size.width / 2) / aspect, -(y - size.height / 2) / aspect, 0);
+  }, { pointerEvents: true });
+ 
+	const [theDefaultTexture] = useLoader(TextureLoader,[ MetalMap, MetalMap, MetalMap, MetalMap, MetalMap, MetalMap] )
+  const [theNFTTexture] = useLoader(TextureLoader,[ defaultImage, defaultImage, defaultImage, defaultImage, defaultImage, defaultImage]  )
+
 	return (
-		<mesh ref={ref}>
-			<boxBufferGeometry attach="geometry" args={[25, 25, 0.2]}/>
-			<meshStandardMaterial attach="material" map={theTexture} metalness={0.5} />
-		</mesh>
-	)
-}
-
-
-
-const Plane = ({ defaultStart, defaultImage }) => {
-
-  const [ref]  = useBox(() => ({mass: 1 }));
-
-	// Lets add a cutom texture & material...
-  THREE.TextureLoader.prototype.crossOrigin = ''
-	const [metalMap] = useLoader(TextureLoader, [defaultImage])
-  
-  if( defaultImage === undefined )
-  return ( <div></div> )
-  else
-	return (
-		<mesh ref={ref} position={defaultStart} >
-			<planeBufferGeometry attach="geometry" args={[25, 25]} />
-			<meshStandardMaterial attach="material" map={metalMap} metalness={0.5} />
+		<mesh castShadow position={position} {...bind()} quaternion={quaternion} ref={ref} onClick={e => {e.stopPropagation();}}>
+			<boxBufferGeometry attach="geometry" args={[25, 35, 1]}/>
+      <meshStandardMaterial attachArray="material" map={theDefaultTexture} metalness={0.5} side={THREE.DoubleSide} />
+      <meshStandardMaterial attachArray="material" map={theDefaultTexture} metalness={0.5} side={THREE.DoubleSide} />
+      <meshStandardMaterial attachArray="material" map={theDefaultTexture} metalness={0.5} side={THREE.DoubleSide} />
+      <meshStandardMaterial attachArray="material" map={theDefaultTexture} metalness={0.5} side={THREE.DoubleSide} />
+      <meshStandardMaterial attachArray="material" map={theNFTTexture} metalness={0.5} side={THREE.DoubleSide} />
+      <meshStandardMaterial attachArray="material" map={theDefaultTexture} metalness={0.5} side={THREE.DoubleSide} />
 		</mesh>
 	)
 }
 
 //A horizontal surface that we can use as a table. This will be subtituted in AR with an actual surface
 const Table = ({ defaultStart, defaultImage }) => {
-  const[ref] = usePlane(() => ({position: [0, -50, 0], rotation:[-Math.PI / 2, 0,0 ] }));
+  const[ref] = usePlane(() => ({position: [0, -50, 0], rotation:[-Math.PI / 2, 0,0 ], type: "static"}));
 
 	// Lets add a cutom texture & material...
   THREE.TextureLoader.prototype.crossOrigin = ''
 	const [metalMap] = useLoader(TextureLoader, [defaultImage])
   
 	return (
-		<mesh position={[0, -120, 0]} rotation = { [-Math.PI / 2, 0,0 ]}>
-			<planeBufferGeometry attach="geometry" args={[1625, 1625]} />
-			<meshLambertMaterial attach="material" color="lightblue" />
+		<mesh receiveShadow position={[0, -50, 0]} rotation = { [-Math.PI / 2, 0,0 ]}>
+			<planeBufferGeometry attach="geometry" args={[1625, 1625]} receiveShadow />
+			<meshStandardMaterial  attach="material" color="lightblue" />
 		</mesh>
 	)
 }
@@ -133,11 +141,6 @@ const App = ({ isServerInfo }) => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isAuthenticated, isWeb3Enabled]);
 
-
-
-  const [card1Mass, setCard1Mass] = useState(0);
-  const [card2Mass, setCard2Mass] = useState(0);
-
   const [nftUrl1, setNftUrl1] = useState(MetalMap);
   const [nftUrl2, setNftUrl2] = useState(MetalMap);
 
@@ -146,16 +149,13 @@ const App = ({ isServerInfo }) => {
     if( currentCard++ >= 2){ 
       console.log("CURRENT 1  " + currentCard );
       setNftUrl1(nftImageUrl);
-      setCard1Mass(1)
       currentCard = 1;
     }
     else{
       console.log("CURRENT 2  " + currentCard );
       setNftUrl2(nftImageUrl);
-      setCard2Mass(1)
     }
   }
-  
   
   return (
     <Layout style={{ height: "100vh", overflow: "auto" }}>
@@ -198,14 +198,15 @@ const App = ({ isServerInfo }) => {
         </Header>
       </Router>
 
-      <Canvas camera={{ position: [0, 0, 55], rotation: [-0.6,0,0], far: 1000 }} 
+      <Canvas colorManagement shadowMap camera={{ position: [0, 0, 55], rotation: [-0.6,0,0], far: 1000 }}
         onCreated={({ gl}) => {
             gl.shadowMap.enabled = true;
             gl.shadowMap.type = THREE.PCFSoftShadowMap;
-        }}>
+        }}
+        >
 
 			<Suspense fallback={null}>
-
+      <ambientLight intensity={0.75} />
  				<Sky
 					distance={45000000}
 					sunPosition={[0, 1, 0]}
@@ -222,13 +223,22 @@ const App = ({ isServerInfo }) => {
 					fade // Faded dots (default=false)
 				/>
 
-				<ambientLight intensity={0.75} />
+      <directionalLight
+        intensity={0.5}
+        position={[20, 20, 20]}
+        shadow-camera-left={-100}
+        shadow-camera-right={100}
+        shadow-camera-top={100}
+        shadow-camera-bottom={-100}
+        castShadow
+      />
 
         <Physics  gravity = {[0, -90.81, 0]}>
-          <Card1 defaultImage={nftUrl1} aMass = {1}/>
-          <Card2 defaultImage={nftUrl2} aMass = {1}/>
+          <Card1 defaultImage={nftUrl1} initialPosition={[-30, -20, 0]}/>
+          <Card2 defaultImage={nftUrl2} initialPosition={[30, -20, 0]}/>
           <Table defaultImage={MetalMap}/>
         </Physics>
+
 
 			</Suspense>
 

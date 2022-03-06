@@ -18,3 +18,9 @@
   overflow: auto;
   border-radius: 1rem;
 }
+
+
+
+#root {
+  cursor: url('./assets/cursor.png') 25 25, auto;
+}
