@@ -13,6 +13,10 @@ import { Canvas, useLoader, useFrame, useThree } from "@react-three/fiber";
 import { MapControls, OrbitControls, Sky, Stars, TransformControls, useCubeTexture  } from "@react-three/drei";
 import { Physics, Debug, useBox, usePlane } from "@react-three/cannon";
 import { useDrag } from "react-use-gesture"
+import * as handTrack from 'handtrackjs';
+
+
+
 
 import MetalMap from "./assets/MetalMap.png";
 
@@ -130,6 +134,7 @@ const Table = ({ defaultStart, defaultImage }) => {
 	)
 }
 
+
 const App = ({ isServerInfo }) => {
   const { isWeb3Enabled, enableWeb3, isAuthenticated, isWeb3EnableLoading } =
     useMoralis();
@@ -144,6 +149,7 @@ const App = ({ isServerInfo }) => {
   const [nftUrl1, setNftUrl1] = useState(MetalMap);
   const [nftUrl2, setNftUrl2] = useState(MetalMap);
 
+  
   const nftUrlToParent = (nftImageUrl) => {  
 
     if( currentCard++ >= 2){ 
@@ -156,7 +162,82 @@ const App = ({ isServerInfo }) => {
       setNftUrl2(nftImageUrl);
     }
   }
-  
+
+  //=============================== HAND TRACK ===========================================//
+
+  /*
+  const getVideo = () => {
+    navigator.mediaDevices
+        .getUserMedia({
+          video: { width: 1920, height: 1080 }
+        })
+        .then(stream => {
+          let video = videoRef.current;
+          video.srcObject = stream;
+          video.play();
+        })
+        .catch(err => {
+          console.error(err);
+        })
+  }
+
+  useEffect(() => {
+    getVideo();
+  }, [videoRef]);
+*/
+
+const videoRef = useRef(null);
+const canvasRef = useRef(null);
+
+let isVideo = false;
+let model = null;
+let context = null;
+
+const modelParams = {
+  flipHorizontal: true, // flip e.g for video  
+  maxNumBoxes: 1, // maximum number of boxes to detect
+  iouThreshold: 0.5, // ioU threshold for non-max suppression
+  scoreThreshold: 0.6, // confidence threshold for predictions.
+}
+
+// Load the model.
+handTrack.load(modelParams).then(lmodel => {
+  model = lmodel
+  console.log("Loaded Model!")
+});
+
+  function runDetection() {
+    model.detect(videoRef.current).then((predictions) => {
+      console.log("Predictions: ", predictions);
+      model.renderPredictions(predictions, canvasRef.current, context, videoRef.current);    
+      if (isVideo) {
+        requestAnimationFrame(runDetection);
+      }
+    });
+  }
+
+ const getVideo = () => {
+    handTrack.startVideo(videoRef.current).then(function (status) {
+        console.log("video started", status);
+        if (status) {
+          console.log("Now tracking")
+          isVideo = true
+          context = canvasRef.current.getContext("2d");
+          console.log("Context IS" + context);
+          runDetection()
+        } else {
+          console.log("Please enable video")
+        }
+      });
+  };
+
+  useEffect(() => {
+    getVideo();
+  }, [canvasRef]);
+
+
+  //===============================================================================//
+
   return (
     <Layout style={{ height: "100vh", overflow: "auto" }}>
       <Router>
@@ -197,6 +278,9 @@ const App = ({ isServerInfo }) => {
 
         </Header>
       </Router>
+
+      <video width={250} height={500} ref={videoRef}/>
+      <canvas ref={canvasRef}></canvas>
 
       <Canvas colorManagement shadowMap camera={{ position: [0, 0, 55], rotation: [-0.6,0,0], far: 1000 }}
         onCreated={({ gl}) => {
