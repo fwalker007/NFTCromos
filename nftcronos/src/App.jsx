@@ -10,7 +10,7 @@ import "./style.css";
 import * as THREE from "three";
 import { TextureLoader } from "three";
 import { Canvas, useLoader, useFrame, useThree } from "@react-three/fiber";
-import { OrbitControls, Sky, Stars  } from "@react-three/drei";
+import { MapControls, Sky, Stars  } from "@react-three/drei";
 import { Physics, Debug, useBox, usePlane } from "@react-three/cannon";
 
 import MetalMap from "./assets/MetalMap.png";
@@ -59,7 +59,7 @@ var currentCard = 1;
 
 const Card1 = ({ defaultImage, aMass }) => {
   console.log("CARD1: " + aMass)
-  const [ref]  = useBox(() => ({mass: aMass , position: [30, 10, 0], args: [25, 25, 0.2] }));
+  const [ref]  = useBox(() => ({mass: aMass , position: [30, -20, 0], rotation: [-0.7, 0, 0], args: [25, 25, 0.2] }));
 	const [theTexture] = useLoader(TextureLoader,[ defaultImage, defaultImage, defaultImage, defaultImage, defaultImage] )
   
 	return (
@@ -74,7 +74,7 @@ const Card1 = ({ defaultImage, aMass }) => {
 const Card2 = ({ defaultImage, aMass }) => {
   
   console.log("CARD2: " + aMass)
-  const [ref]  = useBox(() => ({mass: aMass , position: [30, 10, 0], args: [25, 25, 0.2] }));
+  const [ref]  = useBox(() => ({mass: aMass , position: [-30, -20, 0], rotation: [-0.7, 0, 0], args: [25, 25, 0.2] }));
 	const [theTexture] = useLoader(TextureLoader,[ defaultImage, defaultImage, defaultImage, defaultImage, defaultImage] )
   
 	return (
@@ -108,7 +108,7 @@ const Plane = ({ defaultStart, defaultImage }) => {
 
 //A horizontal surface that we can use as a table. This will be subtituted in AR with an actual surface
 const Table = ({ defaultStart, defaultImage }) => {
-  const[ref] = usePlane(() => ({position: [0, -120, 0], rotation:[-Math.PI / 2, 0,0 ] }));
+  const[ref] = usePlane(() => ({position: [0, -50, 0], rotation:[-Math.PI / 2, 0,0 ] }));
 
 	// Lets add a cutom texture & material...
   THREE.TextureLoader.prototype.crossOrigin = ''
@@ -198,17 +198,15 @@ const App = ({ isServerInfo }) => {
         </Header>
       </Router>
 
-      <Canvas camera={{ position: [0, 0, 200], up: [0, 0, -1], far: 10000 }} 
-        onCreated={({ gl }) => {
+      <Canvas camera={{ position: [0, 0, 55], rotation: [-0.6,0,0], far: 1000 }} 
+        onCreated={({ gl}) => {
             gl.shadowMap.enabled = true;
             gl.shadowMap.type = THREE.PCFSoftShadowMap;
         }}>
 
 			<Suspense fallback={null}>
 
-      < OrbitControls />
-
-				<Sky
+ 				<Sky
 					distance={45000000}
 					sunPosition={[0, 1, 0]}
 					inclination={0}
@@ -216,7 +214,7 @@ const App = ({ isServerInfo }) => {
 				/>
 
 				<Stars
-					radius={100} // Radius of the inner sphere (default=100)
+					radius={500} // Radius of the inner sphere (default=100)
 					depth={50} // Depth of area where stars should fit (default=50)
 					count={5000} // Amount of stars (default=5000)
 					factor={4} // Size factor (default=4)
@@ -227,8 +225,8 @@ const App = ({ isServerInfo }) => {
 				<ambientLight intensity={0.75} />
 
         <Physics  gravity = {[0, -90.81, 0]}>
-          <Card1 defaultImage={nftUrl1} aMass = {card1Mass}/>
-          <Card2 defaultImage={nftUrl2} aMass = {card2Mass}/>
+          <Card1 defaultImage={nftUrl1} aMass = {1}/>
+          <Card2 defaultImage={nftUrl2} aMass = {1}/>
           <Table defaultImage={MetalMap}/>
         </Physics>
 
