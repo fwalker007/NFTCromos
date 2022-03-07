@@ -1,4 +1,4 @@
-# NFTCromos built with Moralis, Polygon, Solidity, hardhat, React, Three.js and WebXR
+# NFTCromos built with Moralis, Polygon, Solidity, hardhat, React, Three.js MediaPipe/TensorFlow and WebXR
 
 An NFT game of trading and skill for Builder Hackathon 2022
 
