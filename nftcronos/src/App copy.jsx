@@ -14,17 +14,22 @@ import { MapControls, OrbitControls, Sky, Stars, TransformControls, useCubeTextu
 import { Physics, Debug, useBox, usePlane } from "@react-three/cannon";
 import { useDrag } from "react-use-gesture"
 
-//===================================== FACE TRACKING ======================================
-import { Hands, HAND_CONNECTIONS} from "@mediapipe/hands";
-import { drawConnector, drawLandmarks } from "@mediapipe/drawing_utils";
-import * as cam from "@mediapipe/camera_utils";
-import Webcam from "react-webcam";
-//===========================================================================================
+//======= HAND TRACKING ========================
+import {Camera} from './camera';
+import {STATE, MODEL_BACKEND_MAP, MEDIAPIPE_HANDS_CONFIG} from './params';
+import * as mpHands from '@mediapipe/hands';
+import * as handdetection from '@tensorflow-models/hand-pose-detection';
+//===============================================
 
 import MetalMap from "./assets/MetalMap.png";
 
 const { Header } = Layout;
- 
+
+let cameras, camera;
+let detector;
+let startInferenceTime, numInferences = 0;
+let inferenceTimeSum = 0, lastPanelUpdate = 0;
+
 const styles = {
   content: {
     display: "flex",
@@ -39,7 +44,7 @@ const styles = {
     width: "90%"
   },
   header: {
-    position: "fixed",
+    position: "fixed", 
     zIndex: 1,
     width: "100%",
     height: "150px",
@@ -55,7 +60,6 @@ const styles = {
   headerRight: {
     display: "flex",
     gap: "20px",
-    marginTop: "0px",
     alignItems: "center",
     fontSize: "15px",
     fontWeight: "600",
@@ -67,7 +71,7 @@ const styles = {
 var currentCard = 1;
 
 const Card1 = ({ defaultImage, initialPosition   }) => {
-  console.log("CARD1: " + initialPosition )
+  /*console.log("CARD1: " + initialPosition )*/
 
   const [ref, api]  = useBox(() => ({mass: 1 , position: initialPosition, rotation: [-0.7, 0, 0], args: [25, 35, 1] }));
 	const [theDefaultTexture] = useLoader(TextureLoader,[ MetalMap, MetalMap, MetalMap, MetalMap, MetalMap, MetalMap] )
@@ -93,7 +97,7 @@ const Card2 = ({ defaultImage, initialPosition   }) => {
   const [quaternion, setQuaternion] = useState([0, 0, 0, 0]);
   const aspect = size.width / viewport.width;
 
-  console.log("CARD2: " + position )
+  /*console.log("CARD2: " + position )*/
 
   const [ref, api]  = useBox(() => ({mass: 1 , position: position, rotation: [-0.7, 0, 0], args: [25, 35, 1] }));
 
@@ -138,6 +142,7 @@ const Table = ({ defaultStart, defaultImage }) => {
 	)
 }
 
+
 const App = ({ isServerInfo }) => {
   const { isWeb3Enabled, enableWeb3, isAuthenticated, isWeb3EnableLoading } =
     useMoralis();
@@ -164,86 +169,172 @@ const App = ({ isServerInfo }) => {
       console.log("CURRENT 2  " + currentCard );
       setNftUrl2(nftImageUrl);
     }
-  } 
+  }
 
   //=============================== HAND TRACK ===========================================//
-
-  const webcamRef = useRef(null);
+  const videoRef = useRef(null);
   const canvasRef = useRef(null);
-
-  const connect = window.drawConnectors;
-
-  var camera = null;
-
-  function onResults(results) {
-    //const video = webcamRef.current.video;
-    const videoWidth = webcamRef.current.video.videoWidth;
-    const videoHeight = webcamRef.current.video.videoHeight;
-
-    // Set canvas width
-    canvasRef.current.width = videoWidth;
-    canvasRef.current.height = videoHeight;
-
-    const canvasElement = canvasRef.current;
-    const canvasCtx = canvasElement.getContext("2d");
-    canvasCtx.save();
-    canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
-    canvasCtx.drawImage(
-      results.image,
-      0,
-      0,
-      canvasElement.width,
-      canvasElement.height
-    );
-    if (results.multiHandLandmarks) {
-      for (const landmarks of results.multiHandLandmarks) {
-        connect(canvasCtx, landmarks, HAND_CONNECTIONS, {
-          color: "#00FF00",
-          lineWidth: 4,
-        });
-        drawLandmarks(canvasCtx, landmarks, {color: '#FF0000', lineWidth: 2});
-
-      }
+  const canvasWrapRef = useRef(null);
+  
+  async function getVideoInputs() {
+    if (!navigator.mediaDevices || !navigator.mediaDevices.enumerateDevices) {
+      console.log('enumerateDevices() not supported.');
+      return [];
     }
-    canvasCtx.restore();
+    const devices = await navigator.mediaDevices.enumerateDevices();
+    const videoDevices = devices.filter(device => device.kind === 'videoinput');
+    return videoDevices;
   }
-  // }
 
-  // setInterval(())
-  useEffect(() => {
-      const hands = new Hands({locateFile: (file) => {
-        return `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`;
-      }});
+  /*
+  const getVideo = () => {
+    navigator.mediaDevices
+        .getUserMedia({
+          video: { width: 1920, height: 1080 }
+        })
+        .then(stream => {
+          let video = videoRef.current;
+          video.srcObject = stream;
+          video.play();
+        })
+        .catch(err => {
+          console.error(err);
+        })
+  }
+*/
 
-      hands.setOptions({
-        maxNumHands: 2,
-        modelComplexity: 1,
-        minDetectionConfidence: 0.5,
-        minTrackingConfidence: 0.5,
-        selfieMode: false
-      });
-      hands.onResults(onResults);
-      
-    if (
-      typeof webcamRef.current !== "undefined" &&
-      webcamRef.current !== null
-    ) {
-      console.log("Creating a new camera")
-      camera = new cam.Camera(webcamRef.current.video, {
-        onFrame: async () => {
-          await hands.send( { image: webcamRef.current.video });
-        },
-        width: 640,
-        height: 480,
-      });
-      camera.start();
+  async function createDetector() {
+    console.log( "Model : "  + STATE.model + " Type : " + STATE.modelConfig.type + "hands : "+ STATE.modelConfig.maxNumHands + " Version : " + mpHands.VERSION +  "Score " + STATE.modelConfig.scoreThreshold);
+    switch (STATE.model) {
+      case handdetection.SupportedModels.MediaPipeHands:
+        const runtime = STATE.backend.split('-')[0];
+        
+        if (runtime === 'mediapipe') {
+          console.log("Creating Media Detector " + runtime)
+          detector = await handdetection.createDetector(STATE.model, {
+            runtime,
+            modelType: STATE.modelConfig.type,
+            maxHands: STATE.modelConfig.maxNumHands,
+            solutionPath: `https://cdn.jsdelivr.net/npm/@mediapipe/hands@${mpHands.VERSION}`
+          });
+
+          console.log( "GOT IT? " + detector );
+          return(detector);
+        } 
+        else if (runtime === 'tfjs') {
+          return handdetection.createDetector(STATE.model, {
+            runtime,
+            modelType: STATE.modelConfig.type,
+            maxHands: STATE.modelConfig.maxNumHands
+          });
+        }
     }
-  }, []);
+
+    console.log( "No detector" );
+  }
+
+  function beginEstimateHandsStats() {
+    startInferenceTime = (performance || Date).now();
+  }
+  
+  function endEstimateHandsStats() {
+    const endInferenceTime = (performance || Date).now();
+    inferenceTimeSum += endInferenceTime - startInferenceTime;
+    ++numInferences;
+  
+    const panelUpdateMilliseconds = 1000;
+    if (endInferenceTime - lastPanelUpdate >= panelUpdateMilliseconds) {
+      const averageInferenceTime = inferenceTimeSum / numInferences;
+      inferenceTimeSum = 0;
+      numInferences = 0;
+      //stats.customFpsPanel.update(
+      //    1000.0 / averageInferenceTime, 120 /* maxValue */);
+      lastPanelUpdate = endInferenceTime;
+    }
+  }
+  
+  async function renderPrediction(myCamera, myDetector) {
+    console.log("Render Prediction Camera " + myCamera.video);
+    console.log("Render Prediction Detector " + myDetector);
+
+      if (myCamera.video.readyState < 2) {
+        await new Promise((resolve) => {
+          myCamera.video.onloadeddata = () => {
+            resolve(myCamera.video);
+          };
+        });
+      }
+    
+      let hands = null;
+    
+      // Detector can be null if initialization failed (for example when loading
+      // from a URL that does not exist).
+      if (myDetector != null) {
+        // FPS only counts the time it takes to finish estimateHands.
+        beginEstimateHandsStats();
+    
+        // Detectors can throw errors, for example when using custom URLs that
+        // contain a model that doesn't provide the expected output.
+        try {
+          hands = await myDetector.estimateHands(
+            myCamera.video,
+              {flipHorizontal: false});
+        } catch (error) {
+          alert(error);
+          myDetector.dispose();
+          myDetector = null;
+          
+        }
+    
+        endEstimateHandsStats();
+      }
+    
+      myCamera.drawCtx();
+    
+      // The null check makes sure the UI is not in the middle of changing to a
+      // different model. If during model change, the result is from an old model,
+      // which shouldn't be rendered.
+      if (hands && hands.length > 0 && !STATE.isModelChanged) {
+        myCamera.drawResults(hands);
+      }
+
+   // requestAnimationFrame(renderPrediction);
+  };
+
+  const getVideo = () => {
+    cameras =  getVideoInputs();
+    console.log( "VideoRef" + videoRef.current)
+
+    STATE.model = handdetection.SupportedModels.MediaPipeHands;
+    const backends = MODEL_BACKEND_MAP[STATE.model];
+    // The first element of the array is the default backend for the model.
+    STATE.backend = backends[0];
+    STATE.modelConfig = {...MEDIAPIPE_HANDS_CONFIG};
+    STATE.modelConfig.type = 'full';
+    STATE.modelConfig.maxNumHands = 2;
+
+    camera = Camera.setupCamera(STATE.camera, videoRef.current, canvasRef.current, canvasWrapRef.current).then( camera =>
+    {
+      console.log( "CAMERA " + camera + " " + camera.video)
+
+      console.log( "GOT VIDEO !")
+      detector = createDetector().then( test =>
+        {
+        renderPrediction(camera, detector);
+        })
+
+    })
+  }
+
+  useEffect(() => {
+    getVideo();
+  }, [videoRef, canvasRef]);
+
+
 
   //===============================================================================//
 
   return (
-
     <Layout style={{ height: "100vh", overflow: "auto" }}>
       <Router>
         <Header style={styles.header}>
@@ -281,41 +372,14 @@ const App = ({ isServerInfo }) => {
             <Account />
           </div>
 
-        <div className="App" >
-        <Webcam ref={webcamRef}
-          style={{
-            position: "absolute",
-            marginLeft: "auto",
-            marginRight: "0",
-            marginTop: "300",
-            left: 0,
-            right: 0,
-            textAlign: "left",
-            zindex: 500,
-            width: 500,
-            height: 400,
-          }}
-        />{" "}
-        <canvas ref={canvasRef} className="output_canvas"
-          style={{
-            position: "absolute",
-            marginLeft: "auto",
-            marginRight: "0",
-            marginTop: "300",
-            left: 0,
-            right: 0,
-            textAlign: "left",
-            zindex: 500,
-            width: 500,
-            height: 400,
-          }}
-        ></canvas>
-      </div>  
-
-
-    </Header>
+        </Header>
       </Router>
- 
+
+      <div ref={canvasWrapRef}>
+        <canvas id="output" ref={canvasRef}/>
+        <video id="video" ref={videoRef} playsInline style={{ width:"auto", height: "500px"}} />
+      </div>
+
       <Canvas colorManagement shadowMap camera={{ position: [0, 0, 55], rotation: [-0.6,0,0], far: 1000 }}
         onCreated={({ gl}) => {
             gl.shadowMap.enabled = true;
@@ -361,10 +425,8 @@ const App = ({ isServerInfo }) => {
 			</Suspense>
 
       </Canvas>
-    
-      </Layout>  
 
-
+    </Layout>
   );
 };
 
