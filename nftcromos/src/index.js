@@ -23,9 +23,12 @@ const Application = () => {
       </MoralisProvider>
     );
   else {
-    console.error( " MISSING MORALIS SERVER INFO !! Rename env.example.txt to env.txt and enter the Moralis server information" )
+    console.error( " MISSING MORALIS SERVER INFO !! Rename env.example to .env and enter the Moralis server information" )
     return (
-      <div/>
+      <div>
+        <h1>"MISSING MORALIS SERVER INFO !! Rename env.example to .env and enter the Moralis server url and API Key</h1>
+      </div>
+      
     );
   }
 };
