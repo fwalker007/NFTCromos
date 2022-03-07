@@ -36,8 +36,9 @@ const Application = () => {
     );
   else {
     console.error( " MISSING MORALIS SERVER INFO !! Rename env.example to .env and enter the Moralis server information" )
+    MoralisError()   
     return (
-      MoralisError()     
+       <div> </div>   
     );
   }
 };
