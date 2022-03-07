@@ -4,6 +4,13 @@ An NFT game of trading and skill for Builder Hackathon 2022
 
 ### Running this project
 
+Simplets and recomended way is to use gitpod. 
+
+#### REQUIREMENTS
+
+Installed cryto wallet. Only tested with MetaMask
+A web camera
+
 #### Gitpod
 
 To deploy this project to Gitpod, follow these steps:
@@ -12,5 +19,19 @@ To deploy this project to Gitpod, follow these steps:
 
 [![Open in Gitpod](https://gitpod.io/button/open-in-gitpod.svg)](https://fwalker007-nftcromos-y7ucyw9xw0h.ws-us34.gitpod.io/)
 
-You must have a MetaMask wallet or CoainBase wallet
+cd to 
+#### Manually
+
+git clone https://github.com/fwalker007/NFTCromos.git
+
+Run
+cd  nftcromos
+
+Install all needed packages
+npm install
+
+Start Server
+npm run start
+
+
 
