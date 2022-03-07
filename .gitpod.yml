@@ -1,10 +1,20 @@
 # List the start up tasks. Learn more https://www.gitpod.io/docs/config-start-tasks/
 tasks:
   - init: echo 'init script' # runs during prebuild
-    command: echo 'start script'
-
+    command: 
+      echo 'start script'
+  - name: Change to project dir
+    command: 
+      cd nftcromos
+  - name: Install, start node, and deploy
+    init: yarn
+  - name: Start server
+    command: |
+      npm run start
+    openMode: tab-after
 # List the ports to expose. Learn more https://www.gitpod.io/docs/config-ports/
 ports:
   - port: 3000
     onOpen: open-preview
+    visibility: public
 
