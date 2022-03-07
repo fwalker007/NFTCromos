@@ -1,0 +1,13 @@
+tasks:
+  - name: Change to project dir
+    command: 
+      cd nftcromos
+  - name: Install, start node, and deploy
+    init: yarn
+  - name: Start server
+    command: |
+      npm run start
+    openMode: tab-after
+ports:
+  - port: 3000-8545
+    visibility: public
