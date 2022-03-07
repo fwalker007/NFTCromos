@@ -4,6 +4,7 @@ import App from "./App";
 import { MoralisProvider } from "react-moralis";
 import "./index.css";
 import { MoralisDappProvider } from "./providers/MoralisDappProvider/MoralisDappProvider";
+import { Modal } from "antd";
 
 /** Get your free Moralis Account https://moralis.io/ */
 
@@ -13,6 +14,17 @@ const SERVER_URL = process.env.REACT_APP_MORALIS_SERVER_URL;
 const Application = () => {
 
   const isServerInfo = APP_ID && SERVER_URL ? true : false;
+  
+  function MoralisError() {
+    let secondsToGo = 5;
+    const modal = Modal.error({
+      title: "Error!",
+      content: `MISSING MORALIS SERVER INFO! Rename env.example to .env and enter the Moralis server information`,
+    });
+    setTimeout(() => {
+      modal.destroy();
+    }, secondsToGo * 1000);
+  }
 
   if (isServerInfo)
     return (
@@ -25,10 +37,7 @@ const Application = () => {
   else {
     console.error( " MISSING MORALIS SERVER INFO !! Rename env.example to .env and enter the Moralis server information" )
     return (
-      <div>
-        <h1>"MISSING MORALIS SERVER INFO !! Rename env.example to .env and enter the Moralis server url and API Key</h1>
-      </div>
-      
+      MoralisError()     
     );
   }
 };
