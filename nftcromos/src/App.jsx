@@ -27,6 +27,8 @@ import Webcam from "react-webcam";
 
 import MetalMap from "./assets/CardType2.jpg";
 
+let index = 0;
+
 const { Header } = Layout;
  
 const styles = {
@@ -236,33 +238,39 @@ const App = ({ isServerInfo }) => {
       canvasElement.height
     );
 
-  
+
+
     if (results.multiHandLandmarks) 
     {
-      let index = 0;
-      let totalY = 0;
-      
+
+      let handNum = 0;
       for (const landmarks of results.multiHandLandmarks) 
-      {        
+      {  
+        handNum++;
         connect(canvasCtx, landmarks, HAND_CONNECTIONS, { color: "#00FF00", lineWidth: 4 });
         drawLandmarks(canvasCtx, landmarks, {color: '#FF0000', lineWidth: 2});
-        totalY = landmarks[index].y;
-      }
 
-
-      if( totalY > 0 )
-      {
-
-        let currentTime = performance.now() ;
-
+        var totalY = 0;
+        var i = 0;
+        var landmark;
+        for( i =0; i<landmarks.length ; i++)
+        {
+          landmark = landmarks[i];
+          totalY = totalY + landmark.y;
+        }   
+        
         //Calcualte the average Y localtion of all the landmarks in the hand.
-        averageY = totalY/results.multiHandLandmarks.length;
-        //console.log( "AVERAGE Y  " + averageY)
+        averageY = totalY/landmarks.length;
+     } 
+
+      if( averageY > 0 && averageY < 1) //the the hand is in the screen we can calculate functionality related to the game
+      {
+        let currentTime = performance.now() ;
 
         let deltaY =  averageY - prevAverage
         let deltaTime = currentTime - prevTime; 
 
-       handVelocity = deltaY / deltaTime;
+        handVelocity = deltaY / deltaTime;
 
         if( handVelocity > 0.001 )
           handDirection = Direction.Down;
@@ -275,8 +283,8 @@ const App = ({ isServerInfo }) => {
         {
             if( handDirection == Direction.Up )
               slap = true;
-        //     console.log( "Hand is moving " + handDirection + " " + handVelocity)
-       //     console.log( "AVERAGE Y  " + averageY + " Prev " + prevAverage  + "Deltay" + deltaY);
+            console.log( "Hand is moving " + handDirection + " " + handVelocity)
+         //   console.log( "AVERAGE Y  " + averageY + " Prev " + prevAverage  + "Deltay" + deltaY);
         }
 
         //make sure the handVelocity does not go above a Max Value
@@ -286,13 +294,17 @@ const App = ({ isServerInfo }) => {
         prevAverage = averageY;
         prevHandDirection = handDirection;
         prevTime = currentTime;
-      }   
+      }
   
     }
     canvasCtx.restore();
+
   }
 
   useEffect(() => {
+    
+      index = 0;
+
       const hands = new Hands({locateFile: (file) => {
         return `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`;
       }});
