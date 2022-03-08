@@ -9,7 +9,7 @@ import "./style.css";
 
 import * as THREE from "three";
 import { TextureLoader } from "three";
-import { Canvas, useLoader, useFrame, useThree } from "@react-three/fiber";
+import { Canvas, useLoader, useFrame, useThree, GLTFLoader } from "@react-three/fiber";
 import { MapControls, OrbitControls, Sky, Stars, TransformControls, useCubeTexture  } from "@react-three/drei";
 import { Physics, Debug, useBox, usePlane } from "@react-three/cannon";
 import { useDrag } from "react-use-gesture"
@@ -27,40 +27,36 @@ import Webcam from "react-webcam";
 
 import MetalMap from "./assets/CardType2.jpg";
 
-let index = 0;
-
 const { Header } = Layout;
  
 const styles = {
   content: {
     display: "flex",
-    justifyContent: "right",
     fontFamily: "Roboto, sans-serif",
     color: "#041836",
-    marginTop: "0px",
-    marginRight: "80px",
     padding: "10px",
     overflow: "auto",
-    height: "100px",
-    width: "90%"
+    height: "85%",
+    width: "70%"
   },
   header: {
     position: "fixed",
     zIndex: 1,
     width: "100%",
-    height: "150px",
+    height: "200px",
     background: "#fff",
     display: "flex",
     justifyContent: "space-between",
     alignItems: "center",
     fontFamily: "Roboto, sans-serif",
     borderBottom: "2px solid rgba(0, 0, 0, 0.06)",
-    padding: "0 10px",
+    padding: "0 0px",
     boxShadow: "0 1px 10px rgb(151 164 175 / 10%)",
   },
   headerRight: {
     display: "flex",
     gap: "20px",
+    padding: 10,
     marginTop: "0px",
     alignItems: "center",
     fontSize: "15px",
@@ -88,6 +84,13 @@ var currentCard = 1;
 
 const MAX_HAND_VELO_Y = 12;
 let slap = false;
+let startGame = false;
+
+function StartGame()
+{
+
+    
+}
 
 const Card1 = ({ defaultImage, initialPosition   }) => {
 
@@ -100,22 +103,33 @@ const Card1 = ({ defaultImage, initialPosition   }) => {
   const pos = useRef([0,0,-1])
   useEffect(() => api.position.subscribe((v) => (pos.current = v)), [])
 
-  useFrame(() => {
 
+  function ApplySlap()
+  {
+    slap = false;
+    console.log( " Slap happen " )
+    if(  pos.current[1] < -49)
+    {
+      let force = handVelocity * -1 * 5000;
+      console.log(  "Vel " +  force + " position " + ref.current.position.y  )
+      //api.velocity.set(0, 100, 0)
+      api.applyLocalForce([0, 0, 1000], [50, 0, 0])
+    }
+  }
+
+  useFrame(() => {
     if (slap) {
-      slap = false;
-      console.log( " Slap happen " )
-      if(  pos.current[1] < -49)
-      {
-        let force = handVelocity * -1 * 5000;
-        console.log(  "Vel " +  force + " position " + ref.current.position.y  )
-        api.velocity.set(0, 100, 0)
-      }
+      ApplySlap()
+    }
+
+    if(startGame){
+      startGame = false
+      api.mass.set(1)
     }
   });
   
   return (
-    <mesh castShadow  onClick={(e) => (e.stopPropagation(), console.log("CARD 1 CLIKED"), api.velocity.set(0, 100, 0))}  ref={ref}>
+    <mesh castShadow  onClick={(e) => (e.stopPropagation(), console.log("CARD 1 CLIKED"), ApplySlap())}  ref={ref}>
       <boxBufferGeometry attach="geometry" position={initialPosition} rotation={[-0.7, 0, 0]} args={[25, 35, 1]}/>
       <meshStandardMaterial attachArray="material" map={theDefaultTexture} metalness={0.5} side={THREE.DoubleSide} />
       <meshStandardMaterial attachArray="material" map={theDefaultTexture} metalness={0.5} side={THREE.DoubleSide} />
@@ -303,8 +317,6 @@ const App = ({ isServerInfo }) => {
 
   useEffect(() => {
     
-      index = 0;
-
       const hands = new Hands({locateFile: (file) => {
         return `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`;
       }});
@@ -445,12 +457,12 @@ const App = ({ isServerInfo }) => {
         castShadow
       />
 
+
         <Physics  gravity = {[0, -90.81, 0]}>
           <Card1 defaultImage={nftUrl1} initialPosition={[-30, -20, 0]}/>
           <Card2 defaultImage={nftUrl2} initialPosition={[30, -20, 0]}/>
           <Table defaultImage={MetalMap}/>
         </Physics>
-
 
 			</Suspense>
 
