@@ -14,14 +14,18 @@ import { MapControls, OrbitControls, Sky, Stars, TransformControls, useCubeTextu
 import { Physics, Debug, useBox, usePlane } from "@react-three/cannon";
 import { useDrag } from "react-use-gesture"
 
-//===================================== FACE TRACKING ======================================
+//===================================== HAND TRACKING ======================================
 import { Hands, HAND_CONNECTIONS} from "@mediapipe/hands";
 import { drawConnector, drawLandmarks } from "@mediapipe/drawing_utils";
 import * as cam from "@mediapipe/camera_utils";
 import Webcam from "react-webcam";
 //===========================================================================================
 
-import MetalMap from "./assets/MetalMap.png";
+//===================================== GAME ======================================
+
+//===========================================================================================
+
+import MetalMap from "./assets/CardType2.jpg";
 
 const { Header } = Layout;
  
@@ -63,16 +67,51 @@ const styles = {
   },
 };
 
+const Direction = {
+  Up: 'up',
+  Down: 'down',
+  Left: 'left',
+  Right: 'right',
+  None: 'none'
+} 
+
+let prevAverage = 0; 
+let averageY = 0;
+let handVelocity = 0;
+let handDirection = Direction.None;
+let prevHandDirection = handDirection;
+var prevTime = performance.now();
 
 var currentCard = 1;
 
-const Card1 = ({ defaultImage, initialPosition   }) => {
-  console.log("CARD1: " + initialPosition )
+const MAX_HAND_VELO_Y = 12;
+let slap = false;
 
+const Card1 = ({ defaultImage, initialPosition   }) => {
+
+  console.log("CARD1: " + initialPosition )
+ 
   const [ref, api]  = useBox(() => ({mass: 1 , position: initialPosition, rotation: [-0.7, 0, 0], args: [25, 35, 1] }));
 	const [theDefaultTexture] = useLoader(TextureLoader,[ MetalMap, MetalMap, MetalMap, MetalMap, MetalMap, MetalMap] )
   const [theNFTTexture] = useLoader(TextureLoader,[ defaultImage, defaultImage, defaultImage, defaultImage, defaultImage, defaultImage]  )
 
+  const pos = useRef([0,0,-1])
+  useEffect(() => api.position.subscribe((v) => (pos.current = v)), [])
+
+  useFrame(() => {
+
+    if (slap) {
+      slap = false;
+      console.log( " Slap happen " )
+      if(  pos.current[1] < -49)
+      {
+        let force = handVelocity * -1 * 5000;
+        console.log(  "Vel " +  force + " position " + ref.current.position.y  )
+        api.velocity.set(0, 100, 0)
+      }
+    }
+  });
+  
   return (
     <mesh castShadow  onClick={(e) => (e.stopPropagation(), console.log("CARD 1 CLIKED"), api.velocity.set(0, 100, 0))}  ref={ref}>
       <boxBufferGeometry attach="geometry" position={initialPosition} rotation={[-0.7, 0, 0]} args={[25, 35, 1]}/>
@@ -128,7 +167,7 @@ const Table = ({ defaultStart, defaultImage }) => {
 
 	// Lets add a cutom texture & material...
   THREE.TextureLoader.prototype.crossOrigin = ''
-	const [metalMap] = useLoader(TextureLoader, [defaultImage])
+	const [metalMap] = useLoader(TextureLoader, [MetalMap])
   
 	return (
 		<mesh receiveShadow position={[0, -50, 0]} rotation = { [-Math.PI / 2, 0,0 ]}>
@@ -175,6 +214,7 @@ const App = ({ isServerInfo }) => {
 
   var camera = null;
 
+
   function onResults(results) {
     //const video = webcamRef.current.video;
     const videoWidth = webcamRef.current.video.videoWidth;
@@ -195,21 +235,63 @@ const App = ({ isServerInfo }) => {
       canvasElement.width,
       canvasElement.height
     );
-    if (results.multiHandLandmarks) {
-      for (const landmarks of results.multiHandLandmarks) {
-        connect(canvasCtx, landmarks, HAND_CONNECTIONS, {
-          color: "#00FF00",
-          lineWidth: 4,
-        });
-        drawLandmarks(canvasCtx, landmarks, {color: '#FF0000', lineWidth: 2});
 
+  
+    if (results.multiHandLandmarks) 
+    {
+      let index = 0;
+      let totalY = 0;
+      
+      for (const landmarks of results.multiHandLandmarks) 
+      {        
+        connect(canvasCtx, landmarks, HAND_CONNECTIONS, { color: "#00FF00", lineWidth: 4 });
+        drawLandmarks(canvasCtx, landmarks, {color: '#FF0000', lineWidth: 2});
+        totalY = landmarks[index].y;
       }
+
+
+      if( totalY > 0 )
+      {
+
+        let currentTime = performance.now() ;
+
+        //Calcualte the average Y localtion of all the landmarks in the hand.
+        averageY = totalY/results.multiHandLandmarks.length;
+        //console.log( "AVERAGE Y  " + averageY)
+
+        let deltaY =  averageY - prevAverage
+        let deltaTime = currentTime - prevTime; 
+
+       handVelocity = deltaY / deltaTime;
+
+        if( handVelocity > 0.001 )
+          handDirection = Direction.Down;
+        else if( handVelocity < -0.001 )
+          handDirection = Direction.Up;
+        else
+          handDirection = Direction.None;
+
+        if( prevHandDirection != handDirection)
+        {
+            if( handDirection == Direction.Up )
+              slap = true;
+        //     console.log( "Hand is moving " + handDirection + " " + handVelocity)
+       //     console.log( "AVERAGE Y  " + averageY + " Prev " + prevAverage  + "Deltay" + deltaY);
+        }
+
+        //make sure the handVelocity does not go above a Max Value
+        if( handVelocity > MAX_HAND_VELO_Y)
+          handVelocity = MAX_HAND_VELO_Y;
+
+        prevAverage = averageY;
+        prevHandDirection = handDirection;
+        prevTime = currentTime;
+      }   
+  
     }
     canvasCtx.restore();
   }
-  // }
 
-  // setInterval(())
   useEffect(() => {
       const hands = new Hands({locateFile: (file) => {
         return `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`;
