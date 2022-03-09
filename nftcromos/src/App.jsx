@@ -21,11 +21,14 @@ import * as cam from "@mediapipe/camera_utils";
 import Webcam from "react-webcam";
 //===========================================================================================
 
+import MetalMap from "./assets/CardType2.jpg";
+
 //===================================== GAME ======================================
 
 //===========================================================================================
 
-import MetalMap from "./assets/CardType2.jpg";
+var resetCard1 = false;
+var resetCard2 = false;
 
 const { Header } = Layout;
  
@@ -63,6 +66,15 @@ const styles = {
     fontWeight: "600",
     width: "10%"
   },
+  headerLeft: {
+    fontSize: "15px",
+    fontWeight: "600",
+    border: "4px solid #e7eaf3", 
+    borderRadius:"12px",
+    textAlign: "center",
+    cursor: "pointer",
+    hright: "80%"
+  },
 };
 
 const Direction = {
@@ -86,17 +98,19 @@ const MAX_HAND_VELO_Y = 12;
 let slap = false;
 let startGame = false;
 
+let nftsPicked = 0;
+
 function StartGame()
 {
 
     
 }
 
-const Card1 = ({ defaultImage, initialPosition   }) => {
+const Card1 = ({ defaultImage, initialPosition, initialMass   }) => {
 
   console.log("CARD1: " + initialPosition )
  
-  const [ref, api]  = useBox(() => ({mass: 1 , position: initialPosition, rotation: [-0.7, 0, 0], args: [25, 35, 1] }));
+  const [ref, api]  = useBox(() => ({mass: initialMass , position: initialPosition, rotation: [-0.7, 0, 0], args: [25, 35, 1] }));
 	const [theDefaultTexture] = useLoader(TextureLoader,[ MetalMap, MetalMap, MetalMap, MetalMap, MetalMap, MetalMap] )
   const [theNFTTexture] = useLoader(TextureLoader,[ defaultImage, defaultImage, defaultImage, defaultImage, defaultImage, defaultImage]  )
 
@@ -117,19 +131,30 @@ const Card1 = ({ defaultImage, initialPosition   }) => {
     }
   }
 
-  useFrame(() => {
+  function OnClicked()
+  {
+    console.log("CARD 1 CLIKED " + nftsPicked)
+    if( nftsPicked === 2)
+    {
+      nftsPicked = 0;
+      console.log("CARD 1 CLIKED " + nftsPicked)
+      startGame = true;
+    }
+  }
+
+  useFrame(() => {    
     if (slap) {
       ApplySlap()
     }
-
-    if(startGame){
-      startGame = false
-      api.mass.set(1)
+    if( resetCard1 ){
+      api.position.set( 25, -35, 0 )
+      api.rotation.set( -0.7, 0, 0 )
+      resetCard1 = false;
     }
   });
   
   return (
-    <mesh castShadow  onClick={(e) => (e.stopPropagation(), console.log("CARD 1 CLIKED"), ApplySlap())}  ref={ref}>
+    <mesh castShadow  onClick={(e) => (e.stopPropagation(), OnClicked())}  ref={ref}>
       <boxBufferGeometry attach="geometry" position={initialPosition} rotation={[-0.7, 0, 0]} args={[25, 35, 1]}/>
       <meshStandardMaterial attachArray="material" map={theDefaultTexture} metalness={0.5} side={THREE.DoubleSide} />
       <meshStandardMaterial attachArray="material" map={theDefaultTexture} metalness={0.5} side={THREE.DoubleSide} />
@@ -141,7 +166,7 @@ const Card1 = ({ defaultImage, initialPosition   }) => {
 	)
 }
 
-const Card2 = ({ defaultImage, initialPosition   }) => {
+const Card2 = ({ defaultImage, initialPosition, initialMass   }) => {
 
   const { size, viewport } = useThree();
   const [position, setPosition] = useState(initialPosition);
@@ -150,7 +175,7 @@ const Card2 = ({ defaultImage, initialPosition   }) => {
 
   console.log("CARD2: " + position )
 
-  const [ref, api]  = useBox(() => ({mass: 1 , position: position, rotation: [-0.7, 0, 0], args: [25, 35, 1] }));
+  const [ref, api]  = useBox(() => ({mass: initialMass, position: position, rotation: [-0.7, 0, 0], args: [25, 35, 1] }));
 
   const bind = useDrag(({ offset: [,], xy: [x, y], first, last }) => {
     if (first) {
@@ -164,8 +189,51 @@ const Card2 = ({ defaultImage, initialPosition   }) => {
 	const [theDefaultTexture] = useLoader(TextureLoader,[ MetalMap, MetalMap, MetalMap, MetalMap, MetalMap, MetalMap] )
   const [theNFTTexture] = useLoader(TextureLoader,[ defaultImage, defaultImage, defaultImage, defaultImage, defaultImage, defaultImage]  )
 
+  const pos = useRef([0,0,-1])
+  useEffect(() => api.position.subscribe((v) => (pos.current = v)), [])
+
+  function ApplySlap()
+  {
+    slap = false;
+    console.log( " Slap happen " )
+    if(  pos.current[1] < -49)
+    {
+      let force = handVelocity * -1 * 5000;
+      console.log(  "Vel " +  force + " position " + ref.current.position.y  )
+      api.applyLocalForce([0, 0, 1000], [50, 0, 0])
+    }
+  }
+
+
+  useFrame(() => {    
+    if (slap) {
+      ApplySlap()
+    }
+    if( resetCard2 ){
+      api.position.set( -25, -35, 0 )
+      api.rotation.set( -0.7, 0, 0 )
+      resetCard2 = false;
+    }
+  });
+  
+
+  function OnClicked()
+  {
+    console.log("CARD 2 CLIKED " + nftsPicked)
+
+    if( nftsPicked === 2)
+    {
+      nftsPicked = 0;
+      console.log("Setting mass")
+      api.mass.set(1)
+      startGame = true;
+    }
+  }
+
+  //	<mesh castShadow position={position} {...bind()} quaternion={quaternion} ref={ref} onClick={e => {e.stopPropagation();OnClicked()}}>
+
 	return (
-		<mesh castShadow position={position} {...bind()} quaternion={quaternion} ref={ref} onClick={e => {e.stopPropagation();}}>
+		<mesh castShadow position={position} {...bind()} quaternion={quaternion} ref={ref} onClick={e => {e.stopPropagation();OnClicked()}}>
 			<boxBufferGeometry attach="geometry" args={[25, 35, 1]}/>
       <meshStandardMaterial attachArray="material" map={theDefaultTexture} metalness={0.5} side={THREE.DoubleSide} />
       <meshStandardMaterial attachArray="material" map={theDefaultTexture} metalness={0.5} side={THREE.DoubleSide} />
@@ -210,6 +278,8 @@ const App = ({ isServerInfo }) => {
   
   const nftUrlToParent = (nftImageUrl) => {  
 
+    nftsPicked = nftsPicked + 1;
+
     if( currentCard++ >= 2){ 
       console.log("CURRENT 1  " + currentCard );
       setNftUrl1(nftImageUrl);
@@ -227,9 +297,7 @@ const App = ({ isServerInfo }) => {
   const canvasRef = useRef(null);
 
   const connect = window.drawConnectors;
-
   var camera = null;
-
 
   function onResults(results) {
     //const video = webcamRef.current.video;
@@ -251,8 +319,6 @@ const App = ({ isServerInfo }) => {
       canvasElement.width,
       canvasElement.height
     );
-
-
 
     if (results.multiHandLandmarks) 
     {
@@ -331,8 +397,7 @@ const App = ({ isServerInfo }) => {
       hands.onResults(onResults);
       
     if (
-      typeof webcamRef.current !== "undefined" &&
-      webcamRef.current !== null
+      typeof webcamRef.current !== "undefined" && webcamRef.current !== null
     ) {
       console.log("Creating a new camera")
       camera = new cam.Camera(webcamRef.current.video, {
@@ -344,17 +409,29 @@ const App = ({ isServerInfo }) => {
       });
       camera.start();
     }
+
   }, []);
 
   //===============================================================================//
+
+  function handleClick() {
+    resetCard1 = true;
+    resetCard2 = true;
+  }
 
   return (
 
     <Layout style={{ height: "100vh", overflow: "auto" }}>
       <Router>
         <Header style={styles.header}>
-          <Logo />
-   
+
+          <div style={{ marginLeft: "20px" }}>       
+          <Logo/>
+          <div style={{ height: "20" }} ></div>
+          <button style={styles.headerLeft} onClick={handleClick} >Reset</button>
+          <div style={{ height: "10%" }}></div>
+          </div>
+
           <Menu
             theme="light"
             mode="horizontal"
@@ -368,12 +445,10 @@ const App = ({ isServerInfo }) => {
             defaultSelectedKeys={["nftMarket"]}
           >
             <Menu.Item key="nft">
-              <NavLink to="/nftBalance">Your NFTs:</NavLink>
+              <NavLink to="/nftBalance">Load NFTs:</NavLink>
             </Menu.Item>
-
           </Menu>
 
-       
         <div style={styles.content}>
           <Switch>
             <Route path="/nftBalance">
@@ -399,7 +474,7 @@ const App = ({ isServerInfo }) => {
             textAlign: "left",
             zindex: 500,
             width: 500,
-            height: 400,
+            height: 350,
           }}
         />{" "}
         <canvas ref={canvasRef} className="output_canvas"
@@ -413,7 +488,7 @@ const App = ({ isServerInfo }) => {
             textAlign: "left",
             zindex: 500,
             width: 500,
-            height: 400,
+            height: 350,
           }}
         ></canvas>
       </div>  
@@ -457,10 +532,9 @@ const App = ({ isServerInfo }) => {
         castShadow
       />
 
-
-        <Physics  gravity = {[0, -90.81, 0]}>
-          <Card1 defaultImage={nftUrl1} initialPosition={[-30, -20, 0]}/>
-          <Card2 defaultImage={nftUrl2} initialPosition={[30, -20, 0]}/>
+        <Physics  gravity = {[0, -9.8, 0]}>
+          <Card1 defaultImage={nftUrl1} initialPosition={[-25, -35, 0]} initialMass={1000}/>
+          <Card2 defaultImage={nftUrl2} initialPosition={[25, -35, 0]} initialMass={1000}/>
           <Table defaultImage={MetalMap}/>
         </Physics>
 
