@@ -7,6 +7,7 @@
     "@mediapipe/camera_utils": "^0.3.1640029074",
     "@mediapipe/drawing_utils": "^0.3.1620248257",
     "@mediapipe/face_mesh": "^0.4.1633559619",
+    "@mediapipe/hands": "^0.4.1646424915",
     "@react-three/cannon": "^4.9.0",
     "@react-three/drei": "^8.12.1",
     "@react-three/fiber": "^7.0.26",
