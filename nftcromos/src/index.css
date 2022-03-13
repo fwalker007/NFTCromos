@@ -106,3 +106,8 @@ select {
   margin-left: 20px !important;
   margin-right: 20px !important;
 }
+.nft-override{
+  height: 350px;
+  overflow: hidden;
+  overflow-y: auto;
+}

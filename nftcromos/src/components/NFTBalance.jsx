@@ -1,4 +1,4 @@
-import React, { useState, createContext } from "react";
+import React, { useState, createContext, useEffect } from "react";
 import { useMoralis } from "react-moralis";
 import { Card, Image, Tooltip, Modal, Input, Alert, Spin, Button } from "antd";
 import { useNFTBalance } from "hooks/useNFTBalance";
@@ -61,6 +61,10 @@ function NFTBalance({childToParent}){
       },
     });
   }
+
+  useEffect(()=>{
+    console.log("NFTBalance",NFTBalance);
+  },[NFTBalance])
 
 
   async function approveAll(nft) {
@@ -152,7 +156,7 @@ function NFTBalance({childToParent}){
 
   return (
     <>
-      <div style={styles.NFTs}>
+      <div style={styles.NFTs} className="nft-override">
         {!fetchSuccess && (
           <>
             <Alert
@@ -162,7 +166,7 @@ function NFTBalance({childToParent}){
             <div style={{ marginBottom: "10px" }}></div>
           </>
         )}
-        {NFTBalance &&
+        {NFTBalance && NFTBalance.length > 0 && 
           NFTBalance.map((nft) => (
                 <Image
                   preview={false}
@@ -171,6 +175,7 @@ function NFTBalance({childToParent}){
                   alt=""
                   style={{ height: "165px", border: "4px solid #e7eaf3", borderRadius:"12px" }}
                   onClick={() =>childToParent(nft.image)}
+                  key={nft.token_id}
                 />
               
           ))}
