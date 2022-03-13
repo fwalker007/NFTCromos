@@ -114,8 +114,7 @@ const Card1 = ({ defaultImage, initialPosition, initialMass   }) => {
     if (slapCard1) {
       slapCard1 = false;
       console.log( " Slap happen " )
-      if(  pos.current[1] < -49)
-      {
+
         let force = handVelocity * -1 * 15000000;
         //console.log(  "VelFOR " +  force + " position " + ref.current.position.y  )
 
@@ -131,7 +130,6 @@ const Card1 = ({ defaultImage, initialPosition, initialMass   }) => {
           card1State = CardStates.ProcessingRound;    
         }, 1000);  
 
-      }
     }
   }
 
@@ -220,7 +218,7 @@ const Card1 = ({ defaultImage, initialPosition, initialMass   }) => {
     if (first) {
         api.mass.set(0);
     } else if (last) {
-        api.mass.set(1);
+        api.mass.set(30);
     }
     api.position.set((x - size.width / 2) / aspect, -(y - size.height / 2) / aspect, 0);
   }, { pointerEvents: true });
@@ -298,8 +296,7 @@ const Card2 = ({ defaultImage, initialPosition, initialMass   }) => {
   {
     slapCard2 = false;
     console.log( " Slap happen " )
-    if(  pos.current[1] < -49)
-    {
+
       let force = handVelocity * -1 * 15000000;
       //console.log(  "VelFOR " +  force + " position " + ref.current.position.y  )
 
@@ -314,8 +311,6 @@ const Card2 = ({ defaultImage, initialPosition, initialMass   }) => {
       setTimeout(() => {
         card2State = CardStates.ProcessingRound;    
       }, 1000);  
-
-    }
   }
 
   function ApplyNFT(){
