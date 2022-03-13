@@ -510,6 +510,28 @@ const Game = () => {
   )
 }
 
+const GameStateLabel = () =>{
+
+  console.log( "TEST ===== > " + gameState)
+
+  switch(gameState)
+  {
+    case GameStates.Player1ChooseNFT:
+      return( <h1> "Player 1 Click On and NFT" </h1>);
+    case GameStates.Player2ChooseNFT:
+      return(<h1> Player 2 Click On and NFT </h1>);
+    case GameStates.Player1Round:
+      return(<h1> Player 1 Ready? </h1>);
+    case GameStates.Player2Round:
+      return(<h1> Player 2 Ready? </h1>);
+    case GameStates.GameEnded:
+      return(<h1> Game Ended Ressetting! </h1>);
+    default:
+       return(<h1> </h1>);
+  }
+}
+
+
 const openNotification = (message,description) => {
   notification.info({
     message,
@@ -534,7 +556,6 @@ const App = ({ isServerInfo }) => {
   const [nftUrl1, setNftUrl1] = useState(MetalMap);
   const [nftUrl2, setNftUrl2] = useState(MetalMap);
 
-  
   const nftUrlToParent = (nftImageUrl) => {  
 
     if( currentCard === 1){ 
@@ -725,9 +746,8 @@ const App = ({ isServerInfo }) => {
         ></canvas>
       </div>  
 
-<GameManager>
-  </GameManager> 
-      <Canvas colorManagement shadowMap camera={{ position: [0, 0, 55], rotation: [-0.6,0,0], far: 500 }}
+
+      <Canvas colorManagement shadowMap camera={{ position: [0, 0, 55], rotation: [-0.9,0,0], far: 500 }}
         onCreated={({ gl}) => {
             gl.shadowMap.enabled = true;
             gl.shadowMap.type = THREE.PCFSoftShadowMap;
@@ -773,7 +793,19 @@ const App = ({ isServerInfo }) => {
 			</Suspense>
 
       </Canvas>
-    
+
+      <div style={{ position: "absolute",
+            marginLeft: "auto",
+            marginRight: "0",
+            marginTop: "300",
+            left: 0,
+            right: 0,
+            textAlign: "center",
+            zindex: 999,
+            height: 50}}>
+        <GameStateLabel/>
+      </div>
+
       </div>  
 
 
