@@ -13,7 +13,8 @@ const LandingPage = ({onClickReset})=>{
     return(
         <div className="headerNew">
             <div className="logo-nft">
-            <Logo />
+            <NavLink to="/"><Logo /></NavLink>
+            {/* <Logo /> */}
             <Button onClick={onClickReset} className="reset" >Reset</Button>
             <NavLink to="/nftBalance">Your NFTs:</NavLink>
             </div>

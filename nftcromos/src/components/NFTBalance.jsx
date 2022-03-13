@@ -175,7 +175,7 @@ function NFTBalance({childToParent}){
                   alt=""
                   style={{ height: "165px", border: "4px solid #e7eaf3", borderRadius:"12px" }}
                   onClick={() =>childToParent(nft.image)}
-                  key={nft.token_id}
+                  key={nft.token_address + "_" +nft.token_id}
                 />
               
           ))}
