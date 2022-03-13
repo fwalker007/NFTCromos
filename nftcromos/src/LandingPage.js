@@ -11,13 +11,13 @@ import { Logo } from "Logo";
  
 const LandingPage = ({onClickReset})=>{
     return(
-        <div class="headerNew">
-            <div class="logo-nft">
+        <div className="headerNew">
+            <div className="logo-nft">
             <Logo />
             <Button onClick={onClickReset} className="reset" >Reset</Button>
             <NavLink to="/nftBalance">Your NFTs:</NavLink>
             </div>
-            <div class="address">
+            <div className="address">
             <Account />
             </div>
         </div>

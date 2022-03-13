@@ -27,11 +27,14 @@ import LandingPage from "LandingPage";
 
 //===================================== GAME ======================================
 import GameManager from "components/GameManager/GameManager";
-import { CodeSandboxCircleFilled } from "@ant-design/icons";
 //===========================================================================================
 
 var resetCard1 = false;
 var resetCard2 = false;
+
+
+const { Header } = Layout;
+
 
 const Direction = {
   Up: 'up',
@@ -41,42 +44,19 @@ const Direction = {
   None: 'none'
 } 
 
-const CardWinStatus = {
-  WonByPlayer1: 'WonByPlayer1',
-  WonByPlayer2: 'WonByPlayer2',
-  None: 'none'
-}
-
 const CardStates = {
   WaitingForNFT: 'WaitingForNFT',
   WaitingForSlap: 'WaitingForSlap',
   ProcessingRound: 'ProcessingRound',
-  WonByPlayer1: 'WonByPlayer1',
-  WonByPlayer2: 'WonByPlayer2',
-  ProcessingEndOfRound: 'ProcessingEndOfRound',
-  RoundEnded: 'RoundEnded',
+  ProcessingLostRound: 'ProcessingLostRound',
+  ProcessingWonRound: 'ProcessingWonRound',
   None: 'None'
 } 
 
-const GameStates = {
-  Player1ChooseNFT: 'Player1ChooseNFT',
-  Player2ChooseNFT: 'Player2ChooseNFT',
-  Player1Round: 'Player1Round',
-  Player2Round: 'Player2Round',
-  GameEnded: 'GameEnded',
-  None: 'None'
-} 
-
-var gameState = GameStates.Player1ChooseNFT;
-var prevGameState = GameStates.None;
-
-var card1State = CardStates.WaitingForNFT;
-var prevCard1State = CardStates.None;
-var card1WonStatus = CardWinStatus.None;
-
-var card2State = CardStates.WaitingForNFT;
-var prevCard2State = CardStates.None;
-var card2WonStatus = CardWinStatus.None;
+var cardsState = CardStates.WaitingForNFT;
+var prevCardsState = CardStates.None;
+let positionVect;
+let moveToLoc = new Vector3(0, 5, 0);
 
 let prevAverage = 0; 
 let averageY = 0;
@@ -91,197 +71,26 @@ const MAX_HAND_VELO_Y = 12;
 let slapCard1 = false;
 let slapCard2 = false;
 
+let nftsPicked = 0;
+
 
 const Card1 = ({ defaultImage, initialPosition, initialMass   }) => {
- // console.log("CARD1: " + initialPosition )
 
-  const { size, viewport } = useThree();
-  const aspect = size.width / viewport.width;
-
-  const [ref, api]  = useBox(() => ({mass: initialMass , position: initialPosition, rotation: [-0.7, 0, 0], args: [25, 35, 1] }));
-	const [theDefaultTexture] = useLoader(TextureLoader,[ MetalMap, MetalMap, MetalMap, MetalMap, MetalMap, MetalMap] )
-  const [theNFTTexture] = useLoader(TextureLoader,[ defaultImage, defaultImage, defaultImage, defaultImage, defaultImage, defaultImage]  )
-
-  const pos = useRef([0,0,-1])
-  const vel = useRef([0,0,0])
-  const rot = useRef()
-  useEffect(() => api.position.subscribe((p) => (pos.current = p)), [])
-  useEffect(() => api.velocity.subscribe((v) => (vel.current = v)), [])
-  useEffect(() => api.rotation.subscribe((r) => (rot.current = r)), [])
-
-  function ApplySlap(){
-
-    if (slapCard1) {
-      slapCard1 = false;
-      console.log( " Slap happen " )
-      if(  pos.current[1] < -49)
-      {
-        let force = handVelocity * -1 * 15000000;
-        //console.log(  "VelFOR " +  force + " position " + ref.current.position.y  )
-
-        let offsetX = ((Math.random() * 40) - 20 );
-        let offsetY = ((Math.random() * 60) - 30 );
-
-        api.applyLocalForce([force/2, force/2, force], [offsetX, offsetY, 0])
-
-        card1State = CardStates.None; 
-
-        //Give it 2 seconds before checking velocity otherwise it might jsut have started moving
-        setTimeout(() => {
-          card1State = CardStates.ProcessingRound;    
-        }, 1000);  
-
-      }
-    }
-  }
-
-  function OnClicked(){}
-
-  function ApplyNFT(){
-    if( gameState === GameStates.Player2ChooseNFT ) //This means that player1 has chosen and NFT
-    {
- //     console.log("NFT APPLIED!!");
-      api.mass.set(30);
-      card1State = CardStates.WaitingForSlap;
-    }
-  }
-
-  const quater = useRef([0,0,0,0])
-  useEffect(() => api.quaternion.subscribe((q) => (quater.current = q)), [])
-
-  function CheckUpsideDown()
-  {
-      let velocityVect1 = new Vector3(vel.current[0])
-      let length = velocityVect1.length()
-
-      if( length < 0.001 ) //We can check see if the card flipped over
-      {
-        let UpVector = new Vector3( 0, 0, 1);
-        let rotatedVector = UpVector.applyQuaternion({x: quater.current[0], y: quater.current[1], z: quater.current[2], w: quater.current[3]})
-        
-        if( rotatedVector.y > 0){
-          console.log("Card 1 IS DOWN");
-        }
-        else{
-          console.log("Card 1 IS UP");
-
-          if( gameState === GameStates.Player1Round )
-            card1WonStatus = CardStates.WonByPlayer1;
-          else if( gameState === GameStates.Player2Round) 
-            card1WonStatus = CardStates.WonByPlayer2;
-      
-          api.velocity.set(0, 0, 0)
-          api.angularVelocity.set(0, 0, 0)
-          api.mass.set(0);
-        }
-        
-        card1State = CardStates.ProcessingEndOfRound;
-      }
-  }
-
-  async function UpdateMoveToPlayersSide(){
-
-    if( card1WonStatus === CardStates.WonByPlayer1 || card1WonStatus === CardStates.WonByPlayer2 ){
-    
-      if( gameState === GameStates.Player2Round )
-        {
-          api.position.set(65, -10, -10)
-          api.rotation.set(-0.6, 0, 0)
-        }
-      else
-        {
-        api.position.set( -65, -10, -10)
-        api.rotation.set( -0.6, 0, 0)
-        }
-    }
-     
-    setTimeout(() => {
-      card1State = CardStates.RoundEnded;    
-    }, 3000);  
-    
-    card1State = CardStates.None;
-  }
-
-  function Reset()
-  {
-    api.position.set( -25, -35, 0 )
-    api.rotation.set( -0.7, 0, 0 )
-    api.velocity.set( 0, 0, 0)
-    api.angularVelocity.set( 0, 0, 0)
-
-    card1State = CardStates.WaitingForNFT;
-    card1WonStatus = CardWinStatus.None;
-
-    api.mass.set(0);
-    resetCard1 = false;
-  }
-  
-  const bind = useDrag(({ offset: [,], xy: [x, y], first, last }) => {
-    if (first) {
-        api.mass.set(0);
-    } else if (last) {
-        api.mass.set(1);
-    }
-    api.position.set((x - size.width / 2) / aspect, -(y - size.height / 2) / aspect, 0);
-  }, { pointerEvents: true });
-
-  useFrame(() => {  
-    if( card1State === CardStates.WaitingForNFT ){
-      ApplyNFT() //Means player one already set the NFT
-    }
-
-    if( card1State === CardStates.WaitingForSlap ){
-      ApplySlap()
-    }
-
-    if( card1State === CardStates.ProcessingRound){
-      CheckUpsideDown();
-    }
-
-    if( card1State === CardStates.ProcessingEndOfRound ){
-       UpdateMoveToPlayersSide();
-    }
-    
-    if( resetCard1 ){
-      Reset();
-    }
-
-    if( prevCard1State !== card1State){
-      console.log( "Card 1 : "  + card1State );
-      if( card1WonStatus === CardWinStatus.WonByPlayer1 || card1WonStatus === CardWinStatus.WonByPlayer2 ){
-        console.log( "Card 1 " + card1WonStatus );
-      }
-    }
-
-    prevCard1State = card1State;
-
-    slapCard1 = false;
+  const spring = useSpring({
+    loop: { reverse: false },
+    from: { position: [-25, -50, 0] },
+    to: { position: [-125, -35, 0] }
   });
-  
-  function OnClicked()
-  {
-    handVelocity = -0.005; 
-    slapCard2 = true;
-    slapCard1 = true;
 
-  }
+  const spring2 = useSpring({
+    loop: { reverse: false },
+    from: { rotation: [-25, -50, 0] },
+    to: { rotation: [0, 0, 0] }
+  });
 
 
-  return (
-    <animated.mesh castShadow  {...bind()} onClick={(e) => (e.stopPropagation(), OnClicked())}  ref={ref}>
-      <boxBufferGeometry attach="geometry" position={initialPosition} rotation={[-0.7, 0, 0]} args={[25, 35, 1]}/>
-      <meshStandardMaterial attachArray="material" map={theDefaultTexture} metalness={0.5} side={THREE.DoubleSide} />
-      <meshStandardMaterial attachArray="material" map={theDefaultTexture} metalness={0.5} side={THREE.DoubleSide} />
-      <meshStandardMaterial attachArray="material" map={theDefaultTexture} metalness={0.5} side={THREE.DoubleSide} />
-      <meshStandardMaterial attachArray="material" map={theDefaultTexture} metalness={0.5} side={THREE.DoubleSide} />
-      <meshStandardMaterial attachArray="material" map={theNFTTexture} metalness={0.5} side={THREE.DoubleSide} />
-      <meshStandardMaterial attachArray="material" map={theDefaultTexture} metalness={0.5} side={THREE.DoubleSide} />
-    </animated.mesh>
-	)
-}
+  console.log("CARD1: " + initialPosition )
 
-const Card2 = ({ defaultImage, initialPosition, initialMass   }) => {
-  //console.log("CARD2: " + initialPosition )
 
   const [ref, api]  = useBox(() => ({mass: initialMass , position: initialPosition, rotation: [-0.7, 0, 0], args: [25, 35, 1] }));
 	const [theDefaultTexture] = useLoader(TextureLoader,[ MetalMap, MetalMap, MetalMap, MetalMap, MetalMap, MetalMap] )
@@ -296,7 +105,7 @@ const Card2 = ({ defaultImage, initialPosition, initialMass   }) => {
 
   function ApplySlap()
   {
-    slapCard2 = false;
+    slapCard1 = false;
     console.log( " Slap happen " )
     if(  pos.current[1] < -49)
     {
@@ -308,23 +117,28 @@ const Card2 = ({ defaultImage, initialPosition, initialMass   }) => {
 
       api.applyLocalForce([force/2, force/2, force], [offsetX, offsetY, 0])
 
-      card2State = CardStates.None; 
-
-      //Give it 2 seconds before checking velocity otherwise it might jsut have started moving
-      setTimeout(() => {
-        card2State = CardStates.ProcessingRound;    
-      }, 1000);  
-
+      cardsState = CardStates.ProcessingRound;
     }
   }
 
-  function ApplyNFT(){
-    if( gameState === GameStates.Player1Round ) //Mean Player 2 has choosen SNFT
-    {
-     // console.log("NFT APPLIED!!");
-      api.mass.set(30);
-      card2State = CardStates.WaitingForSlap;
-    }
+  function OnClicked()
+  {
+ //   api.applyLocalForce([0, 0, 35000], [20, 0, 0])
+ //   console.log("CARD 1 CLIKED " + nftsPicked)
+ //   if( nftsPicked === 2)
+ //   {
+ //     nftsPicked = 0;
+ //     console.log("CARD 1 CLIKED " + nftsPicked)
+ //     cardsState = CardStates.ProcessingRoundResolution;
+ //
+ //   }
+  }
+
+  function ApplyNFT()
+  {
+    console.log("APPLY NFT!!");
+    nftsPicked = 0;
+    cardsState = CardStates.WaitingForSlap;
   }
 
   const quater = useRef([0,0,0,0])
@@ -332,115 +146,79 @@ const Card2 = ({ defaultImage, initialPosition, initialMass   }) => {
 
   function CheckUpsideDown()
   {
-        let velocityVect = new Vector3(vel.current[0])
-        let length = velocityVect.length()
+      let velocityVect = new Vector3(vel.current[0])
+      let length = velocityVect.length()
 
-        if( length < 0.001 ) //We can check see if the card flipped over
-        {
-          let UpVector = new Vector3( 0, 0, 1);
-          let rotatedVector = UpVector.applyQuaternion({x: quater.current[0], y: quater.current[1], z: quater.current[2], w: quater.current[3]})
-         
-          if( rotatedVector.y > 0)
-          {
-            console.log("Card 2 IS DOWN");
-          }
-          else
-          {
-            console.log("Card 2 IS UP");
-
-          if( gameState === GameStates.Player1Round )
-            card2WonStatus = CardStates.WonByPlayer1;
-          else if( gameState === GameStates.Player2Round) 
-            card2WonStatus = CardStates.WonByPlayer2;
+      if( length > 0.01 ) //We can check what happpen
+      {
+        let UpVector = new Vector3( 0, 0, 1);
+        let rotatedVector = UpVector.applyQuaternion({x: quater.current[0], y: quater.current[1], z: quater.current[2], w: quater.current[3]})
+       // console.log( rotatedVector ); // rot.current[2] );
         
-            api.velocity.set(0, 0, 0)
-            api.angularVelocity.set(0, 0, 0)
-            api.mass.set(0);
-          }
-          
-          card2State = CardStates.ProcessingEndOfRound;
+        if( rotatedVector.y > 0)
+        {
+          cardsState = CardStates.ProcessingLostRound;
+          console.log("IS UP");
+          console.log( pos.current )
+          spring.position.from = pos.current;
+          velocity.set(0, 0, 0)
+          angularVelocity.set(0, 0, 0)
         }
+        else 
+        {
+          cardsState = CardStates.ProcessingWonRound;
+          console.log("IS DOWN");
+        }
+      }
   }
 
-  function UpdateMoveToPlayersSide(){
-
-    if(  card2WonStatus === CardStates.WonByPlayer1 ||  card2WonStatus === CardStates.WonByPlayer2 ){
-
-      if( gameState === GameStates.Player2Round )
-        {
-          api.position.set(65, -40, -20)
-          api.rotation.set( -0.6, 0.02, 0)
-        }
-      else
-        {
-        api.position.set( -65, -40, -20)
-        api.rotation.set( -0.6, 0.02, 0)
-        }
-    }
-        
-    setTimeout(() => {
-      card2State = CardStates.RoundEnded;    
-    }, 3000);  
-    
-    card2State = CardStates.None;
-  }
-
-  function Reset()
+  function  UpdateMoveToPlayesSide()
   {
-    api.position.set( 25, -35, 0 )
-    api.rotation.set( -0.7, 0, 0 )
-    api.velocity.set( 0, 0, 0)
-    api.angularVelocity.set( 0, 0, 0)
+//    console.log( spring.position.animation.values[0] )
+    api.position.set(spring.position.animation.values[0].lastPosition, spring.position.animation.values[1].lastPosition, spring.position.animation.values[2].lastPosition  );
     
-    card2State = CardStates.WaitingForNFT;
-    card2WonStatus = CardWinStatus.None;
-
-    api.mass.set(0);
-    resetCard2 = false;
   }
   
   useFrame(() => {  
-    if( card2State === CardStates.WaitingForNFT){
-      ApplyNFT() //Means player one already set the NFT
-    }
-
-    if( card2State === CardStates.WaitingForSlap ){
-      if (slapCard2) {
+    
+    if( cardsState === CardStates.WaitingForSlap )
+    {
+      if (slapCard1) {
         ApplySlap()
       }
     }
 
-    if( card2State === CardStates.ProcessingRound){
+    if( nftsPicked === 2){
+
+      ApplyNFT()
+    }
+
+   if( resetCard1 ){
+      api.position.set( -25, -35, 0 )
+      api.rotation.set( -0.7, 0, 0 )
+      resetCard1 = false;
+    }
+
+    if( cardsState === CardStates.ProcessingRound)
+    {
       CheckUpsideDown();
     }
 
-    if( card2State === CardStates.ProcessingEndOfRound ){
-       UpdateMoveToPlayersSide();
-    }
-    
-    if( resetCard2 ){
-     Reset();
+    if( cardsState === CardStates.ProcessingLostRound )
+    {
+       UpdateMoveToPlayesSide();
     }
 
-    if( prevCard2State !== card2State){
-      console.log( "Card 2 : "  + card2State );
-      if( card2WonStatus === CardWinStatus.WonByPlayer1 || card2WonStatus === CardWinStatus.WonByPlayer2 ){
-        console.log( "Card 2 " + card2WonStatus );
-      }
+    if( prevCardsState !== cardsState)
+    {
+      console.log( cardsState );
     }
 
-    prevCard2State = card2State;
-    slapCard2 = false;
+    prevCardsState = cardsState;
 
+    slapCard1 = false;
   });
   
-  function OnClicked()
-  {
-    handVelocity = -0.005; 
-    slapCard2 = true;
-    slapCard1 = true;
-  }
-
   return (
     <animated.mesh castShadow  onClick={(e) => (e.stopPropagation(), OnClicked())}  ref={ref}>
       <boxBufferGeometry attach="geometry" position={initialPosition} rotation={[-0.7, 0, 0]} args={[25, 35, 1]}/>
@@ -451,6 +229,91 @@ const Card2 = ({ defaultImage, initialPosition, initialMass   }) => {
       <meshStandardMaterial attachArray="material" map={theNFTTexture} metalness={0.5} side={THREE.DoubleSide} />
       <meshStandardMaterial attachArray="material" map={theDefaultTexture} metalness={0.5} side={THREE.DoubleSide} />
     </animated.mesh>
+	)
+}
+
+const Card2 = ({ defaultImage, initialPosition, initialMass   }) => {
+  
+  const { size, viewport } = useThree();
+  const [position, setPosition] = useState(initialPosition);
+  const [quaternion, setQuaternion] = useState([0, 0, 0, 0]);
+  const aspect = size.width / viewport.width;
+
+  console.log("CARD2: " + position )
+
+  const [ref, api]  = useBox(() => ({mass: initialMass, position: position, rotation: [-0.7, 0, 0], args: [25, 35, 1] }));
+
+  const bind = useDrag(({ offset: [,], xy: [x, y], first, last }) => {
+    if (first) {
+        api.mass.set(0);
+    } else if (last) {
+        api.mass.set(1);
+    }
+    api.position.set((x - size.width / 2) / aspect, -(y - size.height / 2) / aspect, 0);
+  }, { pointerEvents: true });
+ 
+	const [theDefaultTexture] = useLoader(TextureLoader,[ MetalMap, MetalMap, MetalMap, MetalMap, MetalMap, MetalMap] )
+  const [theNFTTexture] = useLoader(TextureLoader,[ defaultImage, defaultImage, defaultImage, defaultImage, defaultImage, defaultImage]  )
+
+  const pos = useRef([0,0,-1])
+  useEffect(() => api.position.subscribe((v) => (pos.current = v)), [])
+
+  function ApplySlap()
+  {
+    slapCard2 = false;
+    console.log( " Slap happen " )
+    if(  pos.current[1] < -49)
+    {
+      let force = handVelocity * -1 * 15000000;
+      console.log(  "VelFOR " +  force + " position " + ref.current.position.y  )
+
+      let offsetX = ((Math.random() * 40) - 20 );
+      let offsetY = ((Math.random() * 60) - 30 );
+
+      console.log(  "Offset inX  " + offsetX  )
+
+      api.applyLocalForce([force/2, force/2, force], [offsetX, offsetY, 0])
+    }
+  }
+
+
+  useFrame(() => {
+
+    if (slapCard2) {
+      ApplySlap()
+    }
+    if( resetCard2 ){
+      api.position.set( 25, -35, 0 )
+      api.rotation.set( -0.7, 0, 0 )   
+      resetCard2 = false;
+    }
+  });
+  
+
+  function OnClicked()
+  {
+    console.log("CARD 2 CLIKED " + nftsPicked)
+
+    if( nftsPicked === 2)
+    {
+      nftsPicked = 0;
+      console.log("Setting mass")
+      api.mass.set(1)
+    }
+  }
+
+  //	<mesh castShadow position={position} {...bind()} quaternion={quaternion} ref={ref} onClick={e => {e.stopPropagation();OnClicked()}}>
+
+	return (
+		<mesh castShadow position={position} {...bind()} quaternion={quaternion} ref={ref} onClick={e => {e.stopPropagation();OnClicked()}}>
+			<boxBufferGeometry attach="geometry" args={[25, 35, 1]}/>
+      <meshStandardMaterial attachArray="material" map={theDefaultTexture} metalness={0.5} side={THREE.DoubleSide} />
+      <meshStandardMaterial attachArray="material" map={theDefaultTexture} metalness={0.5} side={THREE.DoubleSide} />
+      <meshStandardMaterial attachArray="material" map={theDefaultTexture} metalness={0.5} side={THREE.DoubleSide} />
+      <meshStandardMaterial attachArray="material" map={theDefaultTexture} metalness={0.5} side={THREE.DoubleSide} />
+      <meshStandardMaterial attachArray="material" map={theNFTTexture} metalness={0.5} side={THREE.DoubleSide} />
+      <meshStandardMaterial attachArray="material" map={theDefaultTexture} metalness={0.5} side={THREE.DoubleSide} />
+		</mesh>
 	)
 }
 
@@ -470,52 +333,7 @@ const Table = ({ defaultStart, defaultImage }) => {
 	)
 }
 
-const Game = () => {
-
-  function timeout(delay) {
-    return new Promise( res => setTimeout(res, delay) );
-  }
-
-  async function ResetAfterDelay()
-  {
-    await timeout(5000); 
-    {
-      console.log("RESETTING ");
-      resetCard1 = true;
-      resetCard2 = true;
-    }
-  }
-
-  useFrame(() => {
-
-    if( card1State === CardStates.RoundEnded && card2State === CardStates.RoundEnded ){
-      if( gameState === GameStates.Player1Round ){
-          if( card1WonStatus === CardWinStatus.None )
-            card1State = CardStates.WaitingForSlap;
-          if( card2WonStatus === CardWinStatus.None )
-            card2State = CardStates.WaitingForSlap;   
-          gameState = GameStates.Player2Round;
-      }
-      else if( gameState === GameStates.Player2Round ){
-          gameState = GameStates.GameEnded;
-          ResetAfterDelay();
-      }
-    }    
-
-    if( prevGameState != gameState )
-      console.log( " ==== GAME STATE === " + gameState);
-
-    prevGameState = gameState;  
-
-  })
-
-  return (
-    <>
-    </>
-  )
-}
-
-const App = ({ isServerInfo }) => {
+const Appwww = ({ isServerInfo }) => {
   const { isWeb3Enabled, enableWeb3, isAuthenticated, isWeb3EnableLoading } =
     useMoralis();
 
@@ -526,24 +344,22 @@ const App = ({ isServerInfo }) => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isAuthenticated, isWeb3Enabled]);
 
-  
   const [nftUrl1, setNftUrl1] = useState(MetalMap);
   const [nftUrl2, setNftUrl2] = useState(MetalMap);
 
   
   const nftUrlToParent = (nftImageUrl) => {  
 
-    if( currentCard === 1){ 
-      //console.log("CURRENT " + currentCard );
+    nftsPicked = nftsPicked + 1;
+
+    if( currentCard++ >= 2){ 
+      console.log("CURRENT 1  " + currentCard );
       setNftUrl1(nftImageUrl);
-      currentCard = 2;
-      gameState = GameStates.Player2ChooseNFT;
+      currentCard = 1;
     }
     else{
-      //console.log("CURRENT " + currentCard );
+      console.log("CURRENT 2  " + currentCard );
       setNftUrl2(nftImageUrl);
-      currentCard = 1;
-      gameState = GameStates.Player1Round;
     }
   } 
 
@@ -668,6 +484,7 @@ const App = ({ isServerInfo }) => {
       });
       camera.start();
     }
+
   }, []);
 
   //===============================================================================//
@@ -723,7 +540,7 @@ const App = ({ isServerInfo }) => {
 
 <GameManager>
   </GameManager> 
-      <Canvas colorManagement shadowMap camera={{ position: [0, 0, 55], rotation: [-0.6,0,0], far: 500 }}
+      <Canvas colorManagement shadowMap camera={{ position: [0, 0, 55], rotation: [-0.6,0,0], far: 1000 }}
         onCreated={({ gl}) => {
             gl.shadowMap.enabled = true;
             gl.shadowMap.type = THREE.PCFSoftShadowMap;
@@ -757,12 +574,10 @@ const App = ({ isServerInfo }) => {
         shadow-camera-bottom={-100}
         castShadow
       />
-
-      <Game/> 
-        
+ 
         <Physics  gravity = {[0, -60.8, 0]}>
           <Card1 defaultImage={nftUrl1} initialPosition={[-25, -35, 0]} initialMass={30}/>
-          <Card2 defaultImage={nftUrl2} initialPosition={[25, -35, 0]} initialMass={30}/>
+      
           <Table defaultImage={MetalMap}/>
         </Physics>
 
