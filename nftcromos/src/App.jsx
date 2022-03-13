@@ -87,7 +87,7 @@ var prevTime = performance.now();
 
 var currentCard = 1;
 
-const MAX_HAND_VELO_Y = 12;
+const MAX_HAND_VELO_Y = -0.0016;
 let slapCard1 = false;
 let slapCard2 = false;
 
@@ -600,11 +600,9 @@ const App = ({ isServerInfo }) => {
 
     if (results.multiHandLandmarks) 
     {
-
-      let handNum = 0;
+  
       for (const landmarks of results.multiHandLandmarks) 
       {  
-        handNum++;
         connect(canvasCtx, landmarks, HAND_CONNECTIONS, { color: "#00FF00", lineWidth: 4 });
         drawLandmarks(canvasCtx, landmarks, {color: '#FF0000', lineWidth: 2});
 
@@ -619,15 +617,24 @@ const App = ({ isServerInfo }) => {
         
         //Calcualte the average Y localtion of all the landmarks in the hand.
         averageY = totalY/landmarks.length;
-     } 
 
+      } 
+
+      if( results.multiHandLandmarks.length === 0)
+      {
+        handVelocity = 0;
+        handDirection = Direction.None;
+        prevHandDirection = handDirection;
+        prevAverage = 0;
+        averageY = 0;
+      }
+
+      let currentTime = performance.now();
       if( averageY > 0 && averageY < 1) //the the hand is in the screen we can calculate functionality related to the game
       {
-        let currentTime = performance.now() ;
-
         let deltaY =  averageY - prevAverage
         let deltaTime = currentTime - prevTime; 
-
+     
         handVelocity = deltaY / deltaTime;
 
         if( handVelocity > 0.001 )
@@ -643,20 +650,21 @@ const App = ({ isServerInfo }) => {
             {
               slapCard1 = true;
               slapCard2 = true
+          
+            console.log( "Hand is moving " + handDirection + " " + handVelocity)
             }
-         //   console.log( "Hand is moving " + handDirection + " " + handVelocity)
          //   console.log( "AVERAGE Y  " + averageY + " Prev " + prevAverage  + "Deltay" + deltaY);
         }
 
         //make sure the handVelocity does not go above a Max Value
-        if( handVelocity > MAX_HAND_VELO_Y)
+        if( handVelocity < MAX_HAND_VELO_Y)
           handVelocity = MAX_HAND_VELO_Y;
 
         prevAverage = averageY;
         prevHandDirection = handDirection;
         prevTime = currentTime;
       }
-  
+      
     }
     canvasCtx.restore();
 
@@ -669,7 +677,7 @@ const App = ({ isServerInfo }) => {
       }});
 
       hands.setOptions({
-        maxNumHands: 2,
+        maxNumHands: 1,
         modelComplexity: 1,
         minDetectionConfidence: 0.5,
         minTrackingConfidence: 0.5,
