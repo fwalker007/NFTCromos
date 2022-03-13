@@ -510,27 +510,6 @@ const Game = () => {
   )
 }
 
-const GameStateLabel = () =>{
-
-  console.log( "TEST ===== > " + gameState)
-
-  switch(gameState)
-  {
-    case GameStates.Player1ChooseNFT:
-      return( <h1> "Player 1 Click On and NFT" </h1>);
-    case GameStates.Player2ChooseNFT:
-      return(<h1> Player 2 Click On and NFT </h1>);
-    case GameStates.Player1Round:
-      return(<h1> Player 1 Ready? </h1>);
-    case GameStates.Player2Round:
-      return(<h1> Player 2 Ready? </h1>);
-    case GameStates.GameEnded:
-      return(<h1> Game Ended Ressetting! </h1>);
-    default:
-       return(<h1> </h1>);
-  }
-}
-
 
 const openNotification = (message,description) => {
   notification.info({
@@ -551,6 +530,24 @@ const App = ({ isServerInfo }) => {
     if (isAuthenticated && !isWeb3Enabled && !isWeb3EnableLoading) enableWeb3();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isAuthenticated, isWeb3Enabled]);
+
+  useEffect(()=>{
+    switch(gameState)
+    {
+      case GameStates.Player1ChooseNFT:
+        return( openNotification("game state","Player 1 Click On and your NFTs and select NFT"));
+      case GameStates.Player2ChooseNFT:
+        return(openNotification("game state","Player 2 Click On and  your NFTs and select NFT"));
+      case GameStates.Player1Round:
+        return(openNotification("game state"," Player 1 Ready? "));
+      case GameStates.Player2Round:
+        return(openNotification("game state"," Player 2 Ready? "));
+      case GameStates.GameEnded:
+        return(openNotification("game state"," Game Ended Ressetting!"));
+      default:
+         return("");
+    }
+  },[gameState])
 
   
   const [nftUrl1, setNftUrl1] = useState(MetalMap);
@@ -666,7 +663,7 @@ const App = ({ isServerInfo }) => {
   }
 
   useEffect(() => {
-    
+    console.log(isAuthenticated,"..isAuthenticated")
       const hands = new Hands({locateFile: (file) => {
         return `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`;
       }});
@@ -709,9 +706,9 @@ const App = ({ isServerInfo }) => {
       <Router>
         <LandingPage onClickReset={handleClick}/>
         <Switch>
-            <Route path="/nftBalance">
+             <Route path="/nftBalance">
               <NFTBalance childToParent={nftUrlToParent}/>
-            </Route>
+            </Route>         
           </Switch>
       </Router>
 
@@ -793,18 +790,6 @@ const App = ({ isServerInfo }) => {
 			</Suspense>
 
       </Canvas>
-
-      <div style={{ position: "absolute",
-            marginLeft: "auto",
-            marginRight: "0",
-            marginTop: "300",
-            left: 0,
-            right: 0,
-            textAlign: "center",
-            zindex: 999,
-            height: 50}}>
-        <GameStateLabel/>
-      </div>
 
       </div>  
 
