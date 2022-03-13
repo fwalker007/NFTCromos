@@ -29,7 +29,6 @@ import LandingPage from "LandingPage";
 import GameManager from "components/GameManager/GameManager";
 import { CodeSandboxCircleFilled } from "@ant-design/icons";
 //===========================================================================================
-
 var resetCard1 = false;
 var resetCard2 = false;
 
@@ -84,6 +83,7 @@ let handVelocity = 0;
 let handDirection = Direction.None;
 let prevHandDirection = handDirection;
 var prevTime = performance.now();
+var lastTimeDown =  performance.now();
 
 var currentCard = 1;
 
@@ -115,6 +115,7 @@ const Card1 = ({ defaultImage, initialPosition, initialMass   }) => {
       slapCard1 = false;
       console.log( " Slap happen " )
 
+      handVelocity = -0.005; 
         let force = handVelocity * -1 * 15000000;
         //console.log(  "VelFOR " +  force + " position " + ref.current.position.y  )
 
@@ -296,6 +297,8 @@ const Card2 = ({ defaultImage, initialPosition, initialMass   }) => {
   {
     slapCard2 = false;
     console.log( " Slap happen " )
+
+    handVelocity = -0.005; 
 
       let force = handVelocity * -1 * 15000000;
       //console.log(  "VelFOR " +  force + " position " + ref.current.position.y  )
@@ -483,6 +486,8 @@ const Game = () => {
 
   useFrame(() => {
 
+   
+
     if( card1State === CardStates.RoundEnded && card2State === CardStates.RoundEnded ){
       if( gameState === GameStates.Player1Round ){
           if( card1WonStatus === CardWinStatus.None )
@@ -530,7 +535,7 @@ const App = ({ isServerInfo }) => {
     if (isAuthenticated && !isWeb3Enabled && !isWeb3EnableLoading) enableWeb3();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isAuthenticated, isWeb3Enabled]);
-
+  
   useEffect(()=>{
     switch(gameState)
     {
@@ -578,6 +583,7 @@ const App = ({ isServerInfo }) => {
   var camera = null;
 
   function onResults(results) {
+
     //const video = webcamRef.current.video;
     const videoWidth = webcamRef.current.video.videoWidth;
     const videoHeight = webcamRef.current.video.videoHeight;
@@ -600,7 +606,7 @@ const App = ({ isServerInfo }) => {
 
     if (results.multiHandLandmarks) 
     {
-  
+      averageY = 0;
       for (const landmarks of results.multiHandLandmarks) 
       {  
         connect(canvasCtx, landmarks, HAND_CONNECTIONS, { color: "#00FF00", lineWidth: 4 });
@@ -615,9 +621,9 @@ const App = ({ isServerInfo }) => {
           totalY = totalY + landmark.y;
         }   
         
-        //Calcualte the average Y localtion of all the landmarks in the hand.
+        //Calcualte the average Y location of all the landmarks in the hand.
         averageY = totalY/landmarks.length;
-
+        
       } 
 
       if( results.multiHandLandmarks.length === 0)
@@ -625,11 +631,12 @@ const App = ({ isServerInfo }) => {
         handVelocity = 0;
         handDirection = Direction.None;
         prevHandDirection = handDirection;
-        prevAverage = 0;
-        averageY = 0;
+        prevAverage = 1;
+        averageY = 1;
       }
 
       let currentTime = performance.now();
+
       if( averageY > 0 && averageY < 1) //the the hand is in the screen we can calculate functionality related to the game
       {
         let deltaY =  averageY - prevAverage
@@ -638,22 +645,33 @@ const App = ({ isServerInfo }) => {
         handVelocity = deltaY / deltaTime;
 
         if( handVelocity > 0.001 )
+        {
           handDirection = Direction.Down;
-        else if( handVelocity < -0.001 )
+          lastTimeDown = performance.now(); 
+        }
+        else if( handVelocity < -0.001  )
+        {
           handDirection = Direction.Up;
+        }
         else
           handDirection = Direction.None;
 
-        if( prevHandDirection !== handDirection)
-        {
+
+        if( prevHandDirection !== handDirection){
+
             if( handDirection === Direction.Up )
             {
-              slapCard1 = true;
-              slapCard2 = true
-          
-            console.log( "Hand is moving " + handDirection + " " + handVelocity)
+              var timeSinceLastDown = performance.now() - lastTimeDown;
+              if( timeSinceLastDown < 100 ){           
+                slapCard1 = true;
+                slapCard2 = true;
+                console.log( "SLAP !================");                       
+              }
             }
-         //   console.log( "AVERAGE Y  " + averageY + " Prev " + prevAverage  + "Deltay" + deltaY);
+         
+      //     console.log( "AVERAGE Y  " + averageY + " Prev " + prevAverage  + " DeltaInY " + deltaY);
+      //     console.log( "Hand is moving " + handDirection + " " + handVelocity)
+
         }
 
         //make sure the handVelocity does not go above a Max Value
@@ -663,6 +681,8 @@ const App = ({ isServerInfo }) => {
         prevAverage = averageY;
         prevHandDirection = handDirection;
         prevTime = currentTime;
+
+   
       }
       
     }
@@ -710,11 +730,11 @@ const App = ({ isServerInfo }) => {
   }
 
   return (
-    <div class="mian">
+    <div className="main">
       <Router>
         <LandingPage onClickReset={handleClick}/>
         <Switch>
-             <Route path="/nftBalance">
+           <Route path="/nftBalance">
               <NFTBalance childToParent={nftUrlToParent}/>
             </Route>         
           </Switch>

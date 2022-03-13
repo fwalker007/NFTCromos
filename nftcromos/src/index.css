@@ -76,7 +76,7 @@ select {
 .iframe{
   display: none;
 }
-.mian:last-child{
+.main:last-child{
   height: 100vh !important;
 }
 

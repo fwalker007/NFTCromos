@@ -16,7 +16,7 @@ const LandingPage = ({onClickReset})=>{
             <NavLink to="/"><Logo /></NavLink>
             {/* <Logo /> */}
             <Button onClick={onClickReset} className="reset" >Reset</Button>
-            <NavLink to="/nftBalance">Your NFTs:</NavLink>
+            <NavLink to="/nftBalance">Load NFTs:</NavLink>
             </div>
             <div className="address">
             <Account />
