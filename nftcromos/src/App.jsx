@@ -3,7 +3,7 @@ import { useMoralis } from "react-moralis";
 import { BrowserRouter as Router, Switch, Route, NavLink, Redirect} from "react-router-dom";
 import Account from "components/Account";
 import NFTBalance from "components/NFTBalance";
-import { Menu, Layout} from "antd";
+import { Menu, Layout, notification} from "antd";
 import "antd/dist/antd.css";
 import "./style.css";
 
@@ -515,6 +515,15 @@ const Game = () => {
   )
 }
 
+const openNotification = (message,description) => {
+  notification.info({
+    message,
+    description,
+    placement:"topRight"
+  });
+};
+
+
 const App = ({ isServerInfo }) => {
   const { isWeb3Enabled, enableWeb3, isAuthenticated, isWeb3EnableLoading } =
     useMoralis();
@@ -676,6 +685,7 @@ const App = ({ isServerInfo }) => {
     console.log("clicked reset")
     resetCard1 = true;
     resetCard2 = true;
+    openNotification("clicked reset","now you can start again")
   }
 
   return (
@@ -687,7 +697,6 @@ const App = ({ isServerInfo }) => {
               <NFTBalance childToParent={nftUrlToParent}/>
             </Route>
           </Switch>
-          <Redirect to="/NFTMarketPlace" />
       </Router>
 
       <div className="App" >
